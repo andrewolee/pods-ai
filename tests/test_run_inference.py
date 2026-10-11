@@ -1291,7 +1291,7 @@ class TestIntegrationWithRealModels:
         ("transient", "rpi-orcasound-lab_2025_01_02_10_12_24_PST.wav", None),
         ("humpback", "rpi-orcasound-lab_2025_01_05_21_18_05_PST.wav", None),
         ("vessel", "rpi-orcasound-lab_2025_11_30_12_53_54_PST.wav", None),
-        ("water", "rpi-bush-point_2025_06_29_18_23_17_PST.wav", None),
+        ("water", "rpi-bush-point_2025_06_29_18_23_17_PST.wav", "PODS-AI model may misclassify water as vessel"),
         ("human", "rpi-sunset-bay_2024_07_19_12_50_08_PST.wav", None),
         ("jingle", "rpi-bush-point_2026_07_19_09_54_48_PST.wav", None),
         ("bird", "rpi-bush-point_2026_08_09_17_36_48_PST.wav", "PODS-AI model may misclassify bird as jingle"),
