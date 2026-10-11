@@ -155,10 +155,10 @@ To have GitHub train a new model from the latest `main` branch:
 5. From HuggingFace, click the [Files](https://huggingface.co/davethaler/whale-call-detector/tree/main) tab.
 6. Get the SHA hash of the latest commit, which will be a long string like `36620370fd59c8a70f9b7be6060d4f40717e796d`.    This can be found by clicking the short prefix to the right of "Model save", just above the list of files, and copying it from the path in the address bar.
 7. Update the SHA commit to the latest version in `src/model_revisions.py`:
-```
-src/model_revisions.py:LATEST_PODSAI_MODEL_REVISION = "36620370fd59c8a70f9b7be6060d4f40717e796d"
-```
-The Docker image reads this same revision from that file.
+   ```
+   src/model_revisions.py:LATEST_PODSAI_MODEL_REVISION = "36620370fd59c8a70f9b7be6060d4f40717e796d"
+   ```
+   The Docker image reads this same revision from that file.
 8. Push the changes to a separate branch in the main repository.
 9. Generate a model comparison as follows. Go to https://github.com/orcasound/pods-ai/actions/workflows/generate_model_comparison.yml in a browser, click the "Run workflow" dropdown, select the branch to use in "Use workflow from" and click "Run workflow". Results are committed to the selected branch, except that selecting `main` commits them to `update-model-comparison`. This may take several hours to run. You could instead run it locally using `python src/compare_models.py --models podsai` to verify that the F1 does not regress from the latest model as shown at the top of this README. Don't proceed further unless the F1 improves.
 10. Update README.md with the latest model comparison results.
@@ -170,9 +170,9 @@ The Docker image reads this same revision from that file.
     workflow to build a new container image and push it to the Azure Container Registry.
 13. Once that succeeds, update the `LiveInferenceSystem/deploy/<slug>.yaml` files to
     reference the new image.  For example:
-```
-image: orcaconservancycr.azurecr.io/pods-ai-live-inference-system:09-05-2026.v1.4.0
-```
+    ```
+    image: orcaconservancycr.azurecr.io/pods-ai-live-inference-system:09-05-2026.v1.4.0
+    ```
 14. Generate a pull request with those changes.
 15. Once that pull request merges, apply the config, e.g., `kubectl apply -f deploy/andrews-bay.yaml` from the
     `LiveInferenceSystem` directory.  See [AzurePlaybook.md](https://github.com/orcasound/orcahello/blob/main/InferenceSystem/AzurePlaybook.md) for troubleshooting guidance if needed.
