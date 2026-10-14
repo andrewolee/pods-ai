@@ -29,12 +29,21 @@ from audio_utils import (
     get_orcahello_detections,
     parse_timestamp_pst,
 )
-from manual_samples_utils import CSV_FIELDNAMES, append_manual_samples, load_existing_uris
+from manual_samples_utils import (
+    CSV_FIELDNAMES,
+    append_manual_samples,
+    filter_overlapping_samples,
+    load_existing_uris,
+)
 from model_inference import get_model_inference
 from orcasite_feeds import get_orcasite_feeds_with_retry
 
 DEFAULT_MANUAL_SAMPLES_CSV = "output/csv/new_manual_samples.csv"
+DEFAULT_TRAINING_SAMPLES_CSV = "output/csv/training_3s_samples.csv"
+DEFAULT_TESTING_SAMPLES_CSV = "output/csv/testing_60s_samples.csv"
 DEFAULT_ORCAHELLO_MODEL_PATH = "orcasound/orcahello-srkw-detector-v1"
+TRAINING_SAMPLE_DURATION_SECONDS = 3
+TESTING_SAMPLE_DURATION_SECONDS = 60
 AUDIO_OFFSET_SECONDS = 2
 WHALE_CLASSES = {"resident", "transient", "humpback"}
 
@@ -55,6 +64,7 @@ def process_false_negatives(
     predicted_category_filter: Optional[str] = None,
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
+    destination_samples_path: Optional[Path] = None,
 ) -> dict[str, int]:
     """Process confirmed OrcaHello SRKW detections in the selected timeframe."""
     summary = {
@@ -66,6 +76,7 @@ def process_false_negatives(
         "wrong_whale_class_segments": 0,
         "appended": 0,
         "duplicates": 0,
+        "overlaps": 0,
     }
     normalized_category_filter = (
         predicted_category_filter.strip().lower() if predicted_category_filter else None
@@ -82,8 +93,7 @@ def process_false_negatives(
             return summary
 
     existing_uris = load_existing_uris(manual_samples_path)
-    proposed_rows = []
-    proposed_uris = set(existing_uris)
+    candidate_rows = []
 
     print(f"Loading podsai model from {model_path}...")
     podsai_model = get_model_inference(model_type="podsai", model_path=model_path)
@@ -189,21 +199,39 @@ def process_false_negatives(
                 mismatched_rows.append(updated_row)
 
             summary["mismatched_segments"] += len(mismatched_rows)
-            for row in mismatched_rows:
-                uri = (row.get("URI") or "").strip()
-                if uri not in proposed_uris:
-                    proposed_uris.add(uri)
-                    proposed_rows.append(row)
+            candidate_rows.extend(mismatched_rows)
 
-            appended, duplicates = append_manual_samples(
-                manual_samples_path,
-                mismatched_rows,
-                existing_uris,
-            )
-            summary["appended"] += appended
-            summary["duplicates"] += duplicates
+    if destination_samples_path is None:
+        destination_samples_path = Path(DEFAULT_TRAINING_SAMPLES_CSV)
+    new_rows = []
+    candidate_uris = set(existing_uris)
+    for row in candidate_rows:
+        uri = (row.get("URI") or "").strip()
+        if uri in candidate_uris:
+            summary["duplicates"] += 1
+            continue
+        candidate_uris.add(uri)
+        new_rows.append(row)
 
-    print("Proposed rows for output/csv/new_manual_samples.csv:")
+    proposed_rows, overlaps = filter_overlapping_samples(
+        new_rows,
+        destination_samples_path,
+        TRAINING_SAMPLE_DURATION_SECONDS,
+        comparison_paths=(
+            (Path(DEFAULT_TESTING_SAMPLES_CSV), TESTING_SAMPLE_DURATION_SECONDS),
+        ),
+    )
+    summary["overlaps"] = overlaps
+
+    appended, duplicates = append_manual_samples(
+        manual_samples_path,
+        proposed_rows,
+        existing_uris,
+    )
+    summary["appended"] = appended
+    summary["duplicates"] += duplicates
+
+    print(f"Proposed rows for {destination_samples_path.as_posix()}:")
     csv_writer = csv.DictWriter(
         sys.stdout,
         fieldnames=CSV_FIELDNAMES,

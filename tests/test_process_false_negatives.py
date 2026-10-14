@@ -193,8 +193,9 @@ class TestProcessFalseNegatives:
         assert summary["not_false_negative"] == 0
         assert summary["mismatched_segments"] == 2
         assert summary["wrong_whale_class_segments"] == 1
-        assert summary["appended"] == 2
+        assert summary["appended"] == 1
         assert summary["duplicates"] == 0
+        assert summary["overlaps"] == 1
         mock_add_samples.assert_called_once()
         assert mock_add_samples.call_args.kwargs["corrected_class"] == "resident"
         assert mock_add_samples.call_args.kwargs["fallback_description"] == detection.comments
@@ -203,23 +204,74 @@ class TestProcessFalseNegatives:
         with open(manual_samples_path, "r", encoding="utf-8") as handle:
             rows = list(csv.DictReader(handle))
 
-        assert len(rows) == 2
+        assert len(rows) == 1
         assert [row["URI"] for row in rows] == [
             "https://example.com/transient",
-            "https://example.com/water",
         ]
         assert all(row["Category"] == "resident" for row in rows)
 
         output = capsys.readouterr().out
-        marker = "Proposed rows for output/csv/new_manual_samples.csv:"
+        marker = "Proposed rows for output/csv/training_3s_samples.csv:"
         assert marker in output
         csv_section = output.split(marker + "\n", 1)[1]
         proposed_rows = list(csv.DictReader(csv_section.splitlines()))
         assert [row["URI"] for row in proposed_rows] == [
             "https://example.com/transient",
-            "https://example.com/water",
         ]
         assert all(row["Category"] == "resident" for row in proposed_rows)
+
+    def test_filters_training_candidate_in_testing_manifest(self, tmp_path):
+        """False-negative training candidates overlapping testing are skipped."""
+        feed = _make_feed()
+        detection = OrcaHelloDetection(
+            id="det_1",
+            feed=feed,
+            timestamp=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            status="confirmed",
+        )
+        wav_path = tmp_path / "input.wav"
+        wav_path.write_bytes(b"wav")
+        segment_dir = tmp_path / "segments"
+        segment_dir.mkdir()
+        segment_timestamp = "2025_01_01_03_59_58_PST"
+        (segment_dir / f"rpi-test_{segment_timestamp}.wav").write_bytes(b"segment")
+        testing_path = tmp_path / "testing_60s_samples.csv"
+        with open(testing_path, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=["Category", "NodeName", "StartTimestamp", "URI"])
+            writer.writeheader()
+            writer.writerow({
+                "Category": "vessel",
+                "NodeName": "rpi_test",
+                "StartTimestamp": "2025_01_01_03_59_00_PST",
+                "URI": "https://example.com/testing",
+            })
+        segment = {
+            "Category": "transient",
+            "NodeName": "rpi_test",
+            "StartTimestamp": segment_timestamp,
+            "URI": "https://example.com/training",
+        }
+        podsai_model = Mock()
+        podsai_model.predict.return_value = {"global_prediction_label": "water"}
+        orcahello_model = Mock()
+        orcahello_model.predict.return_value = {"global_prediction_label": "resident"}
+
+        def get_model(*args, **kwargs):
+            return podsai_model if kwargs["model_type"] == "podsai" else orcahello_model
+
+        with patch("process_false_negatives.DEFAULT_TESTING_SAMPLES_CSV", str(testing_path)), \
+             patch("process_false_negatives.get_model_inference", side_effect=get_model), \
+             patch("process_false_negatives.get_orcasite_feeds_with_retry", return_value=[feed]), \
+             patch("process_false_negatives.get_orcahello_detections", return_value=[detection]), \
+             patch("process_false_negatives.download_60s_audio", return_value=str(wav_path)), \
+             patch("process_false_negatives.add_training_3s_samples", return_value=[segment]):
+            summary = process_false_negatives(
+                manual_samples_path=tmp_path / "manual.csv",
+                output_dir=segment_dir,
+            )
+
+        assert summary["appended"] == 0
+        assert summary["overlaps"] == 1
 
     def test_skips_when_full_clip_prediction_is_resident(self, tmp_path):
         """When full-clip PODS-AI prediction is resident, processing is skipped."""
