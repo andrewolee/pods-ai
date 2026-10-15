@@ -2,6 +2,10 @@
 
 Thank you for your interest in contributing to PODS-AI!
 
+## Code of Conduct
+
+Please read and make sure you understand our [Code of Conduct](/CODE_OF_CONDUCT.md) before contributing to the project.
+
 ## Coding Conventions
 
 ### License Header
