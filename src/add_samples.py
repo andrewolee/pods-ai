@@ -619,7 +619,7 @@ def add_training_3s_samples(
             # Print in CSV format (ready to copy-paste) unless already corrected.
             csv_writer.writerow(
                 [
-                    label,
+                    corrected_class if corrected_class is not None else label,
                     node_name,
                     timestamp_str,
                     segment_uri,

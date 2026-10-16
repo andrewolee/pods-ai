@@ -519,7 +519,7 @@ class TestAddSamples:
         assert [row["Category"] for row in results] == ["vessel", "resident"]
         captured = capsys.readouterr()
         assert "vessel,rpi_orcasound_lab,2025_01_15_12_30_00_PST" not in captured.out
-        assert "resident,rpi_orcasound_lab,2025_01_15_12_30_02_PST" in captured.out
+        assert "vessel,rpi_orcasound_lab,2025_01_15_12_30_02_PST" in captured.out
 
     def test_printed_rows_are_valid_csv_with_special_description(self, tmp_path, capsys):
         """Printed CSV rows should remain valid when description contains commas/newlines."""

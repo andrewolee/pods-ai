@@ -6,6 +6,9 @@ import csv
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
+import pytest
+
+from add_samples import add_training_3s_samples
 from make_csv import OrcaHelloDetection
 from orcasite_feeds import OrcasiteFeed
 from process_false_negatives import (
@@ -84,6 +87,44 @@ class TestAppendManualSamples:
 
 class TestProcessFalseNegatives:
     """Integration-style tests for process_false_negatives."""
+
+    @pytest.mark.parametrize(
+        ("corrected_class", "printed_category"),
+        [("resident", "resident"), (None, "water")],
+    )
+    def test_prints_expected_category_and_returns_prediction(
+        self, tmp_path, capsys, corrected_class, printed_category
+    ):
+        """CSV output uses a correction when supplied without changing returned predictions."""
+        segment_path = tmp_path / "segment.wav"
+        segment_path.write_bytes(b"segment")
+        timestamp = "2025_01_01_04_00_00_PST"
+        podsai_model = Mock()
+        podsai_model.predict.return_value = {
+            "global_prediction_label": "water",
+            "global_confidence": 0.9,
+        }
+
+        with patch(
+            "add_samples.split_wav_into_segments",
+            return_value=[(segment_path, timestamp)],
+        ), patch("add_samples.lookup_detection_in_csv", return_value=None), patch(
+            "add_samples.generate_uri", return_value="https://example.com/segment"
+        ):
+            rows = add_training_3s_samples(
+                wav_file="input.wav",
+                node_name="rpi_test",
+                start_timestamp=timestamp,
+                output_dir=str(tmp_path),
+                model=podsai_model,
+                corrected_class=corrected_class,
+            )
+
+        assert rows[0]["Category"] == "water"
+        output = capsys.readouterr().out
+        csv_section = output.split("Segments in manual_samples.csv format:\n", 1)[1]
+        printed_rows = list(csv.DictReader(csv_section.splitlines()))
+        assert [row["Category"] for row in printed_rows] == [printed_category]
 
     def test_uses_retrying_feed_fetcher(self, tmp_path):
         """Processing should use the shared retrying feed-fetch helper."""
