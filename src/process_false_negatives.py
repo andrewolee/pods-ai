@@ -11,7 +11,8 @@ For each confirmed OrcaHello detection in the selected timeframe, this script:
 4. Splits the WAV into segments and runs PODS-AI segment inference.
 5. Runs OrcaHello inference on each segment.
 6. Appends segments where OrcaHello predicts resident but PODS-AI does not to
-   new_manual_samples.csv with corrected class "resident", avoiding duplicates.
+   new_manual_training_samples.csv or new_manual_testing_samples.csv with corrected class
+   "resident", avoiding duplicates.
 """
 
 import argparse
@@ -22,7 +23,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Optional
 
-from add_samples import DEFAULT_DETECTIONS_CSV, DEFAULT_MODEL_PATH, DEFAULT_OUTPUT_DIR, add_training_3s_samples
+from add_samples import (
+    DEFAULT_DETECTIONS_CSV,
+    DEFAULT_MODEL_PATH,
+    DEFAULT_OUTPUT_DIR,
+    add_testing_60s_sample,
+    add_training_3s_samples,
+)
 from audio_utils import (
     download_60s_audio,
     format_timestamp_pst,
@@ -38,7 +45,8 @@ from manual_samples_utils import (
 from model_inference import get_model_inference
 from orcasite_feeds import get_orcasite_feeds_with_retry
 
-DEFAULT_MANUAL_SAMPLES_CSV = "output/csv/new_manual_samples.csv"
+DEFAULT_MANUAL_TRAINING_SAMPLES_CSV = "output/csv/new_manual_training_samples.csv"
+DEFAULT_MANUAL_TESTING_SAMPLES_CSV = "output/csv/new_manual_testing_samples.csv"
 DEFAULT_TRAINING_SAMPLES_CSV = "output/csv/training_3s_samples.csv"
 DEFAULT_TESTING_SAMPLES_CSV = "output/csv/testing_60s_samples.csv"
 DEFAULT_ORCAHELLO_MODEL_PATH = "orcasound/orcahello-srkw-detector-v1"
@@ -65,6 +73,7 @@ def process_false_negatives(
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
     destination_samples_path: Optional[Path] = None,
+    for_training: bool = True,
 ) -> dict[str, int]:
     """Process confirmed OrcaHello SRKW detections in the selected timeframe."""
     summary = {
@@ -97,8 +106,11 @@ def process_false_negatives(
 
     print(f"Loading podsai model from {model_path}...")
     podsai_model = get_model_inference(model_type="podsai", model_path=model_path)
-    print(f"Loading orcahello model from {orcahello_model_path}...")
-    orcahello_model = get_model_inference(model_type="orcahello", model_path=orcahello_model_path)
+    if for_training:
+        print(f"Loading orcahello model from {orcahello_model_path}...")
+        orcahello_model = get_model_inference(
+            model_type="orcahello", model_path=orcahello_model_path
+        )
 
     for feed in feeds:
         print(f"Processing feed {feed.node_name}")
@@ -139,6 +151,19 @@ def process_false_negatives(
                             "PODS-AI global prediction is resident."
                         )
                         summary["not_false_negative"] += 1
+                        continue
+
+                    if not for_training:
+                        testing_row = add_testing_60s_sample(
+                            node_name=feed.node_name,
+                            start_timestamp=timestamp_str,
+                            detections_csv=detections_csv,
+                            corrected_class="resident",
+                            fallback_description=detection.comments,
+                            fallback_notes="tp_machine",
+                            fallback_tags=detection.tags,
+                        )
+                        candidate_rows.append(testing_row)
                         continue
 
                     print(
@@ -202,7 +227,24 @@ def process_false_negatives(
             candidate_rows.extend(mismatched_rows)
 
     if destination_samples_path is None:
-        destination_samples_path = Path(DEFAULT_TRAINING_SAMPLES_CSV)
+        destination_samples_path = Path(
+            DEFAULT_TRAINING_SAMPLES_CSV if for_training else DEFAULT_TESTING_SAMPLES_CSV
+        )
+    sample_duration = (
+        TRAINING_SAMPLE_DURATION_SECONDS
+        if for_training
+        else TESTING_SAMPLE_DURATION_SECONDS
+    )
+    comparison_path = (
+        Path(DEFAULT_TESTING_SAMPLES_CSV)
+        if for_training
+        else Path(DEFAULT_TRAINING_SAMPLES_CSV)
+    )
+    comparison_duration = (
+        TESTING_SAMPLE_DURATION_SECONDS
+        if for_training
+        else TRAINING_SAMPLE_DURATION_SECONDS
+    )
     new_rows = []
     candidate_uris = set(existing_uris)
     for row in candidate_rows:
@@ -216,10 +258,8 @@ def process_false_negatives(
     proposed_rows, overlaps = filter_overlapping_samples(
         new_rows,
         destination_samples_path,
-        TRAINING_SAMPLE_DURATION_SECONDS,
-        comparison_paths=(
-            (Path(DEFAULT_TESTING_SAMPLES_CSV), TESTING_SAMPLE_DURATION_SECONDS),
-        ),
+        sample_duration,
+        comparison_paths=((comparison_path, comparison_duration),),
     )
     summary["overlaps"] = overlaps
 
@@ -227,6 +267,7 @@ def process_false_negatives(
         manual_samples_path,
         proposed_rows,
         existing_uris,
+        fieldnames=CSV_FIELDNAMES,
     )
     summary["appended"] = appended
     summary["duplicates"] += duplicates
@@ -250,8 +291,15 @@ def main() -> int:
         description=(
             "Process confirmed OrcaHello detections, find 60-second false negatives "
             "where PODS-AI misses resident calls, and append corrected resident "
-            "sub-segments to new_manual_samples.csv."
+            "sub-segments to new_manual_training_samples.csv for the training set,"
+            "or new_manual_testing_samples.csv for the testing set."
         )
+    )
+    parser.add_argument(
+        "--set",
+        type=str,
+        default="training",
+        help="training or testing (default: training).",
     )
     parser.add_argument(
         "--feed",
@@ -277,8 +325,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--manual-samples-csv",
-        default=DEFAULT_MANUAL_SAMPLES_CSV,
-        help="Path to new_manual_samples.csv.",
+        default=None,
+        help="Path to the manual samples CSV; defaults to the file for the selected set.",
     )
     parser.add_argument(
         "--output-dir",
@@ -311,9 +359,21 @@ def main() -> int:
 
     start_time = parse_timestamp_pst(args.start) if args.start else None
     end_time = None if (args.end or "").lower() == "now" else parse_timestamp_pst(args.end)
+    result_set = args.set.lower()
+    if result_set not in ("training", "testing"):
+        print(f"Invalid set value: {args.set}. Must be 'training' or 'testing'.")
+        return 1
+
+    manual_samples_csv = args.manual_samples_csv
+    if not manual_samples_csv:
+        manual_samples_csv = (
+            DEFAULT_MANUAL_TRAINING_SAMPLES_CSV
+            if result_set == "training"
+            else DEFAULT_MANUAL_TESTING_SAMPLES_CSV
+        )
 
     summary = process_false_negatives(
-        manual_samples_path=Path(args.manual_samples_csv),
+        manual_samples_path=Path(manual_samples_csv),
         output_dir=Path(args.output_dir),
         model_path=args.model_path,
         detections_csv=args.detections_csv,
@@ -322,6 +382,7 @@ def main() -> int:
         predicted_category_filter=args.category,
         start_time=start_time,
         end_time=end_time,
+        for_training=(result_set == "training"),
     )
 
     print("\nSummary:")

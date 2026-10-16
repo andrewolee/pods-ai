@@ -10,7 +10,8 @@ For each rejected OrcaHello detection in the selected timeframe, this script:
 3. Infers the corrected class from the OrcaHello comments.
 4. Runs add_samples.py on the WAV file.
 5. Appends whale-predicted segments that do not already match the corrected class
-   to new_manual_samples.csv with the corrected class, avoiding duplicates.
+   to new_manual_training_samples.csv or new_manual_testing_samples.csv with the
+   corrected class, avoiding duplicates.
 """
 
 import argparse

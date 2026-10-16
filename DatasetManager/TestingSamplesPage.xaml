@@ -56,6 +56,23 @@
                 </MultiBinding>
             </Button.IsEnabled>
         </Button>
+        <Button Grid.Row="5" Grid.Column="2"
+                Content="Find more false negatives"
+                Click="MoreFalseNegatives_Click"
+                IsEnabled="{Binding ElementName=SamplesGridControl, Path=InferenceEnabled}"
+                Width="Auto"
+                Margin="0,0,10,10">
+            <Button.Style>
+                <Style TargetType="Button">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Category}" Value="resident">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Button.Style>
+        </Button>
         <Button Grid.Row="5" Grid.Column="3"
                 Content="Update moderated tags"
                 Click="UpdateModeratedTags_Click"

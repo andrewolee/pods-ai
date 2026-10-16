@@ -40,7 +40,7 @@ namespace DatasetManager
                 string result = await RunPythonAsync(@"src\process_false_negatives.py", $"--start {timestamp} --end now --output-dir output/wav/resident");
                 string? trainingCsvSection = DatasetRepository.ExtractCsvSection(
                     result,
-                    "Proposed rows for output/csv/new_manual_samples.csv:");
+                    "Proposed rows for output/csv/new_manual_training_samples.csv:");
                 List<SampleRecord> newTrainingSamples = (trainingCsvSection != null)
                     ? DatasetRepository.LoadSamplesFromText(trainingCsvSection)
                     : new();

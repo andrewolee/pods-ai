@@ -4,6 +4,7 @@
 
 import csv
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -11,9 +12,11 @@ import pytest
 from add_samples import add_training_3s_samples
 from make_csv import OrcaHelloDetection
 from orcasite_feeds import OrcasiteFeed
+import process_false_negatives as false_negatives_module
 from process_false_negatives import (
     append_manual_samples,
     is_orcahello_resident_prediction,
+    main,
     process_false_negatives,
 )
 
@@ -429,3 +432,79 @@ class TestProcessFalseNegatives:
         assert orcahello_model.predict.call_count == 1
         assert mock_add_samples.call_count == 1
         assert mock_add_samples.call_args.kwargs["start_timestamp"] == "2025_01_01_04_04_58_PST"
+
+    def test_testing_set_appends_60_second_false_negative(self, tmp_path):
+        """Testing mode adds a resident 60-second row without segment inference."""
+        feed = _make_feed()
+        detection = OrcaHelloDetection(
+            id="det_1",
+            feed=feed,
+            timestamp=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            status="confirmed",
+            comments="confirmed resident",
+            tags="resident",
+        )
+        wav_path = tmp_path / "input.wav"
+        wav_path.write_bytes(b"wav")
+        testing_path = tmp_path / "testing_60s_samples.csv"
+        training_path = tmp_path / "training_3s_samples.csv"
+        testing_row = {
+            "Category": "resident",
+            "NodeName": "rpi_test",
+            "StartTimestamp": "2025_01_01_03_59_58_PST",
+            "URI": "https://example.com/testing",
+            "Tags": "resident",
+        }
+
+        with patch("process_false_negatives.DEFAULT_TESTING_SAMPLES_CSV", str(testing_path)), \
+             patch("process_false_negatives.DEFAULT_TRAINING_SAMPLES_CSV", str(training_path)), \
+             patch("process_false_negatives.get_model_inference") as get_model, \
+             patch("process_false_negatives.get_orcasite_feeds_with_retry", return_value=[feed]), \
+             patch("process_false_negatives.get_orcahello_detections", return_value=[detection]), \
+             patch("process_false_negatives.download_60s_audio", return_value=str(wav_path)), \
+             patch(
+                 "process_false_negatives.add_testing_60s_sample",
+                 return_value=testing_row,
+             ) as add_testing, \
+             patch("process_false_negatives.add_training_3s_samples") as add_training:
+            get_model.return_value.predict.return_value = {
+                "global_prediction_label": "water",
+            }
+            summary = process_false_negatives(
+                manual_samples_path=tmp_path / "manual_testing.csv",
+                output_dir=tmp_path / "segments",
+                for_training=False,
+            )
+
+        assert summary["appended"] == 1
+        add_testing.assert_called_once_with(
+            node_name="rpi_test",
+            start_timestamp="2025_01_01_03_59_58_PST",
+            detections_csv=false_negatives_module.DEFAULT_DETECTIONS_CSV,
+            corrected_class="resident",
+            fallback_description="confirmed resident",
+            fallback_notes="tp_machine",
+            fallback_tags="resident",
+        )
+        add_training.assert_not_called()
+        assert get_model.call_count == 1
+        with open(tmp_path / "manual_testing.csv", "r", encoding="utf-8") as handle:
+            rows = list(csv.DictReader(handle))
+        assert rows[0]["URI"] == "https://example.com/testing"
+        assert rows[0]["Tags"] == "resident"
+
+    def test_main_routes_testing_set_to_testing_manual_csv(self, monkeypatch):
+        """The testing CLI option selects testing output and processing behavior."""
+        monkeypatch.setattr(
+            "sys.argv",
+            ["process_false_negatives.py", "--set", "testing"],
+        )
+        with patch.object(
+            false_negatives_module, "process_false_negatives", return_value={}
+        ) as process:
+            assert main() == 0
+
+        assert process.call_args.kwargs["manual_samples_path"] == Path(
+            false_negatives_module.DEFAULT_MANUAL_TESTING_SAMPLES_CSV
+        )
+        assert process.call_args.kwargs["for_training"] is False

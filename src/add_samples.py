@@ -94,6 +94,7 @@ class DetectionInfo:
     uri: str
     description: str
     notes: str
+    tags: str
 
 
 def parse_node_and_timestamp_from_filename(wav_file: str) -> tuple[str, str]:
@@ -305,7 +306,7 @@ def lookup_detection_in_csv(node_name: str, timestamp_str: str, detections_csv: 
         detections_csv: Path to detections.csv file.
 
     Returns:
-        DetectionInfo with uri, description, and notes if found, None otherwise.
+        DetectionInfo with uri, description, notes, and tags if found, None otherwise.
     """
     detections_path = Path(detections_csv)
     if not detections_path.exists():
@@ -321,13 +322,15 @@ def lookup_detection_in_csv(node_name: str, timestamp_str: str, detections_csv: 
                     uri = row.get('URI', '').strip()
                     description = row.get('Description', '').strip()
                     notes = row.get('Notes', '').strip()
+                    tags = row.get('Tags', '').strip()
 
                     if uri:
                         print(f"Found detection in detections.csv:")
                         print(f"  URI: {uri}")
                         print(f"  Description: {description if description else '(empty)'}")
                         print(f"  Notes: {notes if notes else '(empty)'}")
-                        return DetectionInfo(uri=uri, description=description, notes=notes)
+                        print(f"  Tags: {tags if tags else '(empty)'}")
+                        return DetectionInfo(uri=uri, description=description, notes=notes, tags=tags)
     except Exception as e:
         print(f"Warning: Failed to read detections.csv: {e}")
         return None
