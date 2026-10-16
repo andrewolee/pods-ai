@@ -798,6 +798,16 @@ class TestBuildTagsList:
 
         assert build_tags_list(result) == ["srkw"]
 
+    def test_abiotic_is_not_treated_as_a_global_whale_label(self):
+        """Legacy single-label output does not promote abiotic to a whale tag."""
+        from run_inference import build_tags_list
+
+        result = {
+            "global_prediction_label": "abiotic",
+        }
+
+        assert build_tags_list(result) == []
+
     def test_tags_deduplicate_global_and_local_positive_labels(self):
         """Global positives are emitted once even when repeated locally."""
         from run_inference import build_tags_list

@@ -47,7 +47,7 @@ from model_revisions import LATEST_PODSAI_MODEL_REVISION, PODSAI_WAV2VEC2_MODEL_
 # Preserve the existing exported constant name for compatibility.
 PODSAI_MODEL_REVISION = LATEST_PODSAI_MODEL_REVISION
 PROPOSED_DESCRIPTION_EXTRA_CLASSES = {"vessel", "human", "jingle", "bird"}
-NEGATIVE_LABELS = {"other", "water", "vessel", "jingle", "human", "bird"}
+NEGATIVE_LABELS = {"abiotic", "other", "water", "vessel", "jingle", "human", "bird"}
 
 
 def parse_pst_end_timestamp(timestamp_str: str) -> datetime:

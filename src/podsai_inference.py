@@ -205,7 +205,9 @@ class PodsAIInference(ModelInference):  # Inherit from ModelInference
 
         # Validate that model has at least one negative/background class.
         # Accept either explicit "other" or treat specific classes as negative.
-        negative_classes = {"other", "water", "vessel", "jingle", "human", "bird"}
+        negative_classes = {
+            "abiotic", "bird", "human", "jingle", "other", "vessel", "water"
+        }
         positive_classes = {"resident", "transient", "humpback"}
 
         found_negative = negative_classes & set(self.label2id.keys())
@@ -213,7 +215,8 @@ class PodsAIInference(ModelInference):  # Inherit from ModelInference
 
         if not found_negative:
             raise ValueError(
-                f"Model must include at least one negative/background class (other, water, vessel, jingle, human, or bird). "
+                "Model must include at least one negative/background class "
+                "(other, abiotic, water, vessel, jingle, human, or bird). "
                 f"Found labels: {list(self.label2id.keys())}. "
                 f"Please train the model with at least one negative class to distinguish from whale calls."
             )
@@ -798,7 +801,7 @@ class PodsAIInference(ModelInference):  # Inherit from ModelInference
 
         # Define label groups by name and map to ids when available.
         NEGATIVE_LABEL_NAMES = {"jingle", "bird"}
-        BACKGROUND_LABEL_NAMES = {"other", "water", "vessel", "human"}
+        BACKGROUND_LABEL_NAMES = {"abiotic", "other", "water", "vessel", "human"}
 
         negative_ids_set = {self.label2id[l] for l in NEGATIVE_LABEL_NAMES if l in self.label2id}
         background_ids_set = {self.label2id[l] for l in BACKGROUND_LABEL_NAMES if l in self.label2id}

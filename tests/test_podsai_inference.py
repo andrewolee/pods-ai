@@ -960,6 +960,29 @@ class TestPodsAIInferenceErrorHandling:
         assert mock_extractor_class.from_pretrained.call_count == 1
         assert mock_extractor_class.from_pretrained.call_args.args[0] == "test-model-path"
         assert mock_extractor_class.from_pretrained.call_args.kwargs.get("revision") == "deadbeef"
+
+    @patch('podsai_inference.AutoModelForAudioClassification')
+    @patch('podsai_inference.AutoFeatureExtractor')
+    def test_accepts_abiotic_as_background_class(
+        self, mock_extractor_class, mock_model_class,
+        mock_feature_extractor, mock_podsai_model
+    ):
+        """A model with abiotic as its background label passes initialization."""
+        mock_podsai_model.config.id2label = {
+            0: "abiotic", 1: "resident", 2: "transient", 3: "humpback"
+        }
+        mock_podsai_model.config.label2id = {
+            label: class_id
+            for class_id, label in mock_podsai_model.config.id2label.items()
+        }
+        mock_extractor_class.from_pretrained = Mock(return_value=mock_feature_extractor)
+        mock_model_class.from_pretrained = Mock(return_value=mock_podsai_model)
+
+        from podsai_inference import PodsAIInference
+
+        model = PodsAIInference("test-model-path")
+
+        assert model.negative_class_ids == {0}
     
     @patch('podsai_inference.AutoModelForAudioClassification')
     @patch('podsai_inference.AutoFeatureExtractor')

@@ -38,6 +38,7 @@ def test_is_positive_label_uses_multiclass_negative_set() -> None:
     assert orchestrator.is_positive_label("humpback")
 
     assert not orchestrator.is_positive_label("other")
+    assert not orchestrator.is_positive_label("abiotic")
     assert not orchestrator.is_positive_label("water")
     assert not orchestrator.is_positive_label("vessel")
     assert not orchestrator.is_positive_label("jingle")
