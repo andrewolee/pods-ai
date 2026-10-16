@@ -728,9 +728,14 @@ def main() -> int:
                 "--custom-model-path"
             )
         parsed_models = [parse_model_spec(model) for model in models]
+        seen_models: set[str] = set()
+        for display_name, _, _ in parsed_models:
+            if display_name in seen_models:
+                raise ValueError(
+                    f"{display_name} may be listed only once in --models"
+                )
+            seen_models.add(display_name)
         custom_count = sum(display_name == "custom" for display_name, _, _ in parsed_models)
-        if custom_count > 1:
-            raise ValueError("custom may be listed only once in --models")
         if custom_count and args.custom_model_path is None:
             raise ValueError(
                 "custom is listed in --models but --custom-model-path was not provided"

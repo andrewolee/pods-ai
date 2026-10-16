@@ -729,6 +729,27 @@ class TestMainCLI:
             result = main()
         assert result == 1
 
+    @pytest.mark.parametrize(
+        "model", ["fastai", "orcahello", "wav2vec2", "oldpodsai", "podsai", "custom"]
+    )
+    def test_returns_1_for_duplicate_model(self, tmp_path, capsys, model):
+        """main() rejects duplicate model names with a model-specific error."""
+        from compare_models import main
+
+        wav_dir = tmp_path / "testing-wav"
+        wav_dir.mkdir()
+        test_args = [
+            "compare_models.py",
+            "--wav-dir", str(wav_dir),
+            "--models", f"{model},{model}",
+        ]
+        with patch.object(sys, "argv", test_args), \
+             patch("compare_models.get_model_inference") as load_model:
+            assert main() == 1
+
+        assert f"{model} may be listed only once in --models" in capsys.readouterr().err
+        load_model.assert_not_called()
+
     def test_returns_1_for_missing_custom_model_path(self, tmp_path):
         """main() rejects a missing path before attempting model loading."""
         from compare_models import main
