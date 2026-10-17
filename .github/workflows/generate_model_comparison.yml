@@ -4,7 +4,7 @@
 name: Generate Model Comparison
 
 on:
-  create:
+  push:
     tags:
       - model-*
   workflow_dispatch:
