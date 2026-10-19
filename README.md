@@ -80,11 +80,21 @@ result in a false positive.
 
 1. Install Python 3.12
 
+macOS:
+```
+brew install python@3.12
+```
+
 2. Install FFmpeg
 
 Linux:
 ```
 sudo apt-get install -y ffmpeg
+```
+
+macOS:
+```
+brew install ffmpeg
 ```
 
 Windows:
@@ -98,11 +108,28 @@ choco install ffmpeg -y
 pip install -r requirements.txt
 ```
 
+macOS on Apple Silicon: the command above fails outright, because `fastai==1.0.61`
+depends on `pynvx` on Darwin, and `pynvx` has never published a wheel for arm64 (or
+for Python 3.12+ on any platform). Work around it by installing everything else
+first, then installing `fastai` and `fastai_audio` without pulling in that broken
+dependency:
+
+```bash
+grep -v -e '^fastai==' -e '^git+.*fastai_audio' requirements.txt > /tmp/requirements-no-fastai.txt
+pip install -r /tmp/requirements-no-fastai.txt
+pip install fastai==1.0.61 --no-deps
+pip install "git+https://github.com/fastaudio/fastai_audio@0.1" --no-deps
+pip install bottleneck fastprogress beautifulsoup4 numexpr
+```
+
+This only affects the legacy `model_type="fastai"` code path in
+`src/model_inference.py`; the `podsai`, `oldpodsai`, and `orcahello` model types
+never import `fastai`/`fastai_audio` and are unaffected by the missing dependency.
+
 4. Patch fastai_audio
 
-Linux:
 ```bash
-patch_fastai_audio.sh
+./patch_fastai_audio.sh
 ```
 
 Windows:
@@ -110,7 +137,13 @@ Windows:
 patch_fastai_audio.bat
 ```
 
-5. Run unit tests with `python -m pytest tests/ -v -s`
+5. Initialize the `external/orcahello` git submodule (required by the test suite):
+
+```
+git submodule update --init external/orcahello
+```
+
+6. Run unit tests with `python -m pytest tests/ -v -s`
 
 If anything fails, compare what the [run_tests.yml](.github/workflows/run_tests.yml) workflow does.
 

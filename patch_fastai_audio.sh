@@ -27,15 +27,30 @@ echo "Found audio/data.py at: $AUDIO_DATA_FILE"
 # Create a backup
 cp "$AUDIO_DATA_FILE" "${AUDIO_DATA_FILE}.bak"
 
-# Apply the fix using sed
+# Apply the fix using Python's in-place text editing rather than `sed -i`, whose
+# flag syntax differs between GNU sed (Linux) and BSD sed (macOS) and silently
+# no-ops on macOS instead of editing the file.
 # Change: sg_cfg: SpectrogramConfig = SpectrogramConfig()
 # To: sg_cfg: SpectrogramConfig = field(default_factory=SpectrogramConfig)
+python3 - "$AUDIO_DATA_FILE" <<'EOF'
+import sys
 
-# First, add 'field' to the dataclasses import
-sed -i 's/from dataclasses import dataclass, asdict/from dataclasses import dataclass, asdict, field/' "$AUDIO_DATA_FILE"
+path = sys.argv[1]
+with open(path) as f:
+    text = f.read()
 
-# Then, fix the sg_cfg line
-sed -i 's/sg_cfg: SpectrogramConfig = SpectrogramConfig()/sg_cfg: SpectrogramConfig = field(default_factory=SpectrogramConfig)/' "$AUDIO_DATA_FILE"
+text = text.replace(
+    "from dataclasses import dataclass, asdict",
+    "from dataclasses import dataclass, asdict, field",
+)
+text = text.replace(
+    "sg_cfg: SpectrogramConfig = SpectrogramConfig()",
+    "sg_cfg: SpectrogramConfig = field(default_factory=SpectrogramConfig)",
+)
+
+with open(path, "w") as f:
+    f.write(text)
+EOF
 
 echo "Patch applied successfully!"
 echo "Backup saved to: ${AUDIO_DATA_FILE}.bak"
