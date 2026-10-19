@@ -173,6 +173,30 @@ def test_main_forwards_custom_model_revision(tmp_path):
     )
 
 
+def test_main_forwards_orcahello_model_revision(tmp_path):
+    """The OrcaHello revision option reaches model loading and evaluation."""
+    from compare_models import ModelResult, main
+
+    wav_dir = tmp_path / "testing-wav"
+    _make_wav(wav_dir, "resident")
+    revision = "0123456789abcdef0123456789abcdef01234567"
+    args = [
+        "compare_models.py", "--wav-dir", str(wav_dir), "--models", "orcahello",
+        "--orcahello-model-revision", revision, "--max-samples", "1",
+    ]
+    with patch.object(sys, "argv", args), \
+         patch("compare_models.get_model_inference", return_value=object()) as load_model, \
+         patch("compare_models.evaluate_model", return_value=ModelResult("orcahello")) as evaluate:
+        assert main() == 0
+
+    load_model.assert_called_once_with(
+        model_type="orcahello",
+        model_path="orcasound/orcahello-srkw-detector-v1",
+        model_revision=revision,
+    )
+    assert evaluate.call_args.kwargs["model_revision"] == revision
+
+
 def test_custom_model_uses_category_membership_for_abiotic():
     """Custom models use multi-class membership for background categories."""
     from compare_models import is_correct_prediction

@@ -667,7 +667,9 @@ def get_model_inference(model_path: Optional[str] = None, model_type: str = "fas
             model_path = OrcaHelloSRKWInference.DEFAULT_MODEL_PATH
 
         # Filter kwargs to only include parameters supported by OrcaHelloSRKWInference.
-        orcahello_kwargs = {k: v for k, v in kwargs.items() if k in ("config",)}
+        orcahello_kwargs = {
+            k: v for k, v in kwargs.items() if k in ("config", "model_revision")
+        }
 
         return get_orcahello_srkw_inference(model_path, **orcahello_kwargs)
     elif model_type == "fastai":

@@ -276,7 +276,11 @@ def run_inference(wav_path: str, model_type: str = "podsai",
         model = (
             inference_model
             if inference_model is not None
-            else get_model_inference(model_type="orcahello", model_path=model_path)
+            else get_model_inference(
+                model_type="orcahello",
+                model_path=model_path,
+                model_revision=model_revision,
+            )
         )
 
         start_time = time.perf_counter()

@@ -671,6 +671,16 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--orcahello-model-revision",
+        dest="orcahello_model_revision",
+        default=None,
+        metavar="REVISION",
+        help=(
+            "Hugging Face revision for the OrcaHello model. "
+            "Only used when --orcahello-model-path is a Hub model ID."
+        ),
+    )
+    parser.add_argument(
         "--podsai-model-path",
         default=PODSAI_MODEL_ID,
         help=(
@@ -763,7 +773,7 @@ def main() -> int:
     }
     model_revisions: dict[str, Optional[str]] = {
         "fastai": None,
-        "orcahello": None,
+        "orcahello": args.orcahello_model_revision,
         "wav2vec2": PODSAI_WAV2VEC2_MODEL_REVISION,
         "oldpodsai": PREVIOUS_PODSAI_MODEL_REVISION,
         "podsai": args.podsai_model_revision,

@@ -25,6 +25,7 @@ python src/compare_models.py [options]
 | `--custom-model-revision REVISION` | Optional revision for a custom Hugging Face model. Ignored for local paths. |
 | `--fastai-model-path PATH` | FastAI model directory. Default: `model`. |
 | `--orcahello-model-path PATH_OR_HF_ID` | OrcaHello model path or Hub ID. Default: `orcasound/orcahello-srkw-detector-v1`. |
+| `--orcahello-model-revision REVISION` | Optional Hugging Face revision for OrcaHello. Used only when `--orcahello-model-path` is a Hub ID. |
 | `--podsai-model-path PATH_OR_HF_ID` | PODS-AI model path or Hub ID for `wav2vec2`, `oldpodsai`, and `podsai`. Default: `davethaler/whale-call-detector`. |
 | `--podsai-model-revision REVISION` | Revision for the built-in `podsai` model. |
 | `--max-samples N` | Evaluate at most `N` WAV files. `N` must be positive. |
@@ -35,7 +36,7 @@ Built-in model names map to these inference backends:
 | Name | Backend | Revision behavior |
 | --- | --- | --- |
 | `fastai` | FastAI | No revision |
-| `orcahello` | OrcaHello | No revision |
+| `orcahello` | OrcaHello | `--orcahello-model-revision` |
 | `wav2vec2` | PODS-AI | Pinned Wav2Vec2 revision |
 | `oldpodsai` | PODS-AI | Pinned previous revision |
 | `podsai` | PODS-AI | `--podsai-model-revision` |
@@ -133,6 +134,14 @@ python src/compare_models.py \
     --models podsai,custom \
     --custom-model-path my-org/my-whale-detector \
     --custom-model-revision d66c75205e3d229aa5fe875cb27bc90304654fcd
+```
+
+Evaluate OrcaHello at a specific Hugging Face revision:
+
+```bash
+python src/compare_models.py \
+    --models orcahello \
+    --orcahello-model-revision 0123456789abcdef0123456789abcdef01234567
 ```
 
 Limit evaluation to resident samples and ten files:

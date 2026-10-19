@@ -708,6 +708,26 @@ class TestRunInferenceOrcaHello:
         finally:
             Path(wav_path).unlink(missing_ok=True)
 
+    def test_forwards_model_revision_to_orcahello_loader(self):
+        """run_inference forwards an OrcaHello revision when loading the model."""
+        wav_path = _make_wav()
+        revision = "0123456789abcdef0123456789abcdef01234567"
+        try:
+            mock_model = _make_orcahello_model_mock()
+            with patch("run_inference.get_model_inference", return_value=mock_model) as factory:
+                from run_inference import run_inference
+
+                run_inference(
+                    wav_path,
+                    model_type="orcahello",
+                    model_path="orcasound/orcahello-srkw-detector-v1",
+                    model_revision=revision,
+                )
+
+            assert factory.call_args.kwargs["model_revision"] == revision
+        finally:
+            Path(wav_path).unlink(missing_ok=True)
+
 
 
 class TestRunInferenceErrors:
