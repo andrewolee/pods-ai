@@ -8,8 +8,7 @@ m3u8
 matplotlib
 numpy>=2.5.3,<2.6
 opencv-python
-pandas>=3.0.3,<3.1; python_version < "3.12"
-pandas>=2.2.0; python_version >= "3.12"
+pandas>=2.2.0
 pydub==0.25.1
 pytz
 requests

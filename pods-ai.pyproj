@@ -92,8 +92,8 @@ MODEL_URL=https://trainedproductionmodels.blob.core.windows.net/dnnmodel/11-15-2
   <ItemGroup>
     <Interpreter Include=".venv\">
       <Id>.venv</Id>
-      <Version>3.11</Version>
-      <Description>.venv (Python 3.11 (64-bit))</Description>
+      <Version>3.12</Version>
+      <Description>.venv (Python 3.12 (64-bit))</Description>
       <InterpreterPath>Scripts\python.exe</InterpreterPath>
       <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
       <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
