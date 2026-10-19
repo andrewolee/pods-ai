@@ -74,6 +74,56 @@ def test_multilabel_prediction_counts_matching_species_as_correct():
     assert not is_correct_prediction("humpback", "resident", "podsai", ["resident", "transient"])
 
 
+@pytest.mark.parametrize("model_type", ["podsai", "oldpodsai", "wav2vec2", "custom"])
+@pytest.mark.parametrize("predicted_label", ["water", "vessel", "jingle"])
+@pytest.mark.parametrize("multilabel", [False, True])
+def test_abiotic_accepts_specific_predictions(model_type, predicted_label, multilabel):
+    """Abiotic ground truth accepts its specific sound categories."""
+    from compare_models import is_correct_prediction
+
+    labels = ["other", predicted_label] if multilabel else None
+    primary_label = "other" if multilabel else predicted_label
+    assert is_correct_prediction("abiotic", primary_label, model_type, labels)
+
+
+@pytest.mark.parametrize("predicted_label", ["other", "bird", "human", "resident", "transient", "humpback", ""])
+def test_abiotic_does_not_accept_unrelated_predictions(predicted_label):
+    """The abiotic rule does not accept every background or whale category."""
+    from compare_models import is_correct_prediction
+
+    assert not is_correct_prediction("abiotic", predicted_label, "podsai")
+
+
+def test_specific_categories_still_require_matching_predictions():
+    """Abiotic matching is directional and preserves specific ground truth."""
+    from compare_models import is_correct_prediction
+
+    assert is_correct_prediction("abiotic", "abiotic", "podsai")
+    assert not is_correct_prediction("water", "abiotic", "podsai")
+    assert not is_correct_prediction("water", "vessel", "podsai")
+
+
+def test_evaluate_abiotic_keeps_original_predictions(tmp_path):
+    """Correctness uses abiotic membership without relabeling metric data."""
+    from compare_models import evaluate_model
+
+    wav_dir = tmp_path / "testing-wav"
+    wav_files = _make_wav(wav_dir, "abiotic")
+    prediction = {
+        "global_prediction_label": "jingle",
+        "global_prediction_labels": ["jingle", "resident"],
+        "predict_time": 0.1,
+    }
+    with patch("compare_models.run_inference", return_value=prediction):
+        result = evaluate_model("podsai", None, wav_files, wav_dir)
+
+    assert result.correct == 1
+    assert result.accuracy == 1.0
+    assert result.confusion_matrix == {"abiotic": {"jingle": 1}}
+    assert result.prediction_labels == {"abiotic": [{"jingle", "resident"}]}
+    assert result.false_positive_count_for_label("resident") == 1
+
+
 def test_validate_custom_model_path_expands_tilde(tmp_path, monkeypatch):
     """Existing tilde paths are normalized before they reach the loader."""
     from compare_models import resolve_custom_model_path

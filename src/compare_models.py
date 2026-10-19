@@ -17,6 +17,7 @@ A "correct" identification means:
     "resident", or anything other than "resident" when the label is not "resident".
   - For custom, podsai, oldpodsai, and wav2vec2, the actual category is present in the model's
     multi-label prediction set (with a single-label fallback for older models).
+    Abiotic samples also accept water, vessel, or jingle predictions.
 
 For each whale class X (resident, transient, humpback):
   - X false positives are samples predicted as X when the correct label was not X.
@@ -38,6 +39,7 @@ from model_revisions import (
 from run_inference import run_inference
 
 RESIDENT_LABEL = "resident"
+ABIOTIC_LABELS = {"abiotic", "water", "vessel", "jingle"}
 WHALE_CLASS_NAMES = {"humpback", "resident", "transient"}
 BACKGROUND_LABELS = {
     "abiotic", "bird", "human", "jingle", "other", "vessel", "water"
@@ -377,12 +379,15 @@ def is_correct_prediction(
                           membership determines correctness for binary models. When
                           omitted or empty, the primary ``predicted_label`` is used
                           as a single-label fallback.
+                          Abiotic ground truth also accepts water, vessel, or jingle.
 
     Returns:
         True when the prediction is correct under the model-specific summary rules.
     """
     labels = predicted_labels or [predicted_label]
     if is_exact_match_model(model_type):
+        if actual_label == "abiotic":
+            return bool(ABIOTIC_LABELS.intersection(labels))
         return actual_label in labels
     if actual_label in BACKGROUND_LABELS:
         return RESIDENT_LABEL not in labels
@@ -598,6 +603,7 @@ def print_summary(results: list[ModelResult]) -> None:
     print("Definitions:")
     print("  Accuracy     = Correct / Evaluated")
     print("  Correct      = fastai/orcahello: resident vs other; wav2vec2/oldpodsai/podsai/custom: category in prediction set")
+    print("                 abiotic also accepts water, vessel, or jingle")
     print("  F1           = macro F1 over humpback, resident, and transient classes that are present")
     print("  [R|T|H]FP%   = among non-[R|T|H] samples, fraction predicted as that class")
     print("  [R|T|H]FN%   = among actual samples of that class, fraction predicted as another class")

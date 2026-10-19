@@ -106,6 +106,9 @@ not printed by the CLI.
 - `wav2vec2`, `oldpodsai`, `podsai`, and `custom` use the expected category's
   membership in `global_prediction_labels`; older output falls back to
   `global_prediction_label`.
+- For an `abiotic` sample, `water`, `vessel`, and `jingle` predictions also
+  count as correct. Specific ground-truth categories still require a matching
+  prediction. The confusion matrix and whale metrics retain the original labels.
 - Macro F1 covers `resident`, `transient`, and `humpback` classes present in
   the evaluated samples, either as the correct class or the predicted class.
 - `[R|T|H]FP%` is the fraction of non-class samples predicted as that class.
