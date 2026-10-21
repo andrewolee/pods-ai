@@ -14,7 +14,7 @@ pytz
 requests
 scipy
 soundfile
-setuptools>=74,<80
+setuptools>=84,<85
 spacy>=3.5.4
 fastai==1.0.61
 torch>=2.1.0
