@@ -87,6 +87,7 @@ MODEL_URL=https://trainedproductionmodels.blob.core.windows.net/dnnmodel/11-15-2
   <ItemGroup>
     <Content Include="MCP_USAGE.md" />
     <Content Include="README.md" />
+    <Content Include="requirements-onnx.txt" />
     <Content Include="requirements.txt" />
   </ItemGroup>
   <ItemGroup>

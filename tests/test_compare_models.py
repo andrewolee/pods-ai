@@ -247,6 +247,71 @@ def test_main_forwards_orcahello_model_revision(tmp_path):
     assert evaluate.call_args.kwargs["model_revision"] == revision
 
 
+@pytest.mark.parametrize(
+    ("model_name", "path_option", "display_name"),
+    [
+        ("custom", "--custom-model-path", "custom"),
+        ("wav2vec2", "--podsai-model-path", "wav2vec2"),
+        ("oldpodsai", "--podsai-model-path", "oldpodsai"),
+        ("podsai", "--podsai-model-path", "podsai"),
+        ("orcahello", "--orcahello-model-path", "orcahello"),
+    ],
+)
+def test_main_loads_onnx_from_model_path_options(tmp_path, model_name, path_option, display_name):
+    """ONNX paths from each model-path option use the PODS-AI ONNX backend."""
+    from compare_models import ModelResult, main
+
+    wav_dir = tmp_path / "testing-wav"
+    _make_wav(wav_dir)
+    onnx_model = tmp_path / "model.onnx"
+    onnx_model.touch()
+    args = [
+        "compare_models.py",
+        "--wav-dir", str(wav_dir),
+        "--models", model_name,
+        path_option, str(onnx_model),
+        "--feature-extractor", "example/extractor",
+        "--max-samples", "1",
+    ]
+    model = type("Model", (), {"predict": lambda self, _: {}})()
+    with patch.object(sys, "argv", args), \
+         patch("compare_models.get_model_inference", return_value=model) as load_model, \
+         patch("compare_models.evaluate_model", return_value=ModelResult(display_name)) as evaluate:
+        assert main() == 0
+
+    load_model.assert_called_once_with(
+        model_type="podsai",
+        model_path=str(onnx_model),
+        feature_extractor="example/extractor",
+        model_revision=LATEST_PODSAI_MODEL_REVISION,
+    )
+    assert evaluate.call_args.kwargs["model_type"] == "podsai"
+    assert evaluate.call_args.kwargs["result_model_type"] == display_name
+    assert evaluate.call_args.kwargs["model_revision"] == LATEST_PODSAI_MODEL_REVISION
+
+
+def test_main_rejects_missing_explicit_onnx_model(tmp_path, capsys):
+    """An explicit ONNX path is not mistaken for an export destination."""
+    from compare_models import main
+
+    wav_dir = tmp_path / "testing-wav"
+    _make_wav(wav_dir)
+    missing_onnx = tmp_path / "missing.onnx"
+    args = [
+        "compare_models.py",
+        "--wav-dir", str(wav_dir),
+        "--models", "podsai",
+        "--podsai-model-path", str(missing_onnx),
+        "--max-samples", "1",
+    ]
+    with patch.object(sys, "argv", args), \
+         patch("compare_models.get_model_inference") as load_model:
+        assert main() == 1
+
+    load_model.assert_not_called()
+    assert "ONNX file not found" in capsys.readouterr().err
+
+
 def test_custom_model_uses_category_membership_for_abiotic():
     """Custom models use multi-class membership for background categories."""
     from compare_models import is_correct_prediction

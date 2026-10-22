@@ -306,6 +306,44 @@ def _verify_podsai_prediction(result: dict, audio_type: str, allow_category_matc
 class TestRunInferencePodsAI:
     """Tests for run_inference() with a mocked PODS-AI model."""
 
+    def test_onnx_model_uses_explicit_feature_extractor(self):
+        from run_inference import run_inference
+
+        model = _make_podsai_model_mock()
+        with patch("run_inference.get_model_inference", return_value=model) as load_model:
+            run_inference(
+                "sample.wav",
+                model_type="podsai",
+                model_path="model.onnx",
+                feature_extractor="example/extractor",
+                model_revision="0123456789abcdef",
+            )
+
+        load_model.assert_called_once_with(
+            model_type="podsai",
+            model_path="model.onnx",
+            feature_extractor="example/extractor",
+            model_revision="0123456789abcdef",
+        )
+
+    def test_onnx_model_defaults_to_pinned_feature_extractor_revision(self):
+        from run_inference import run_inference
+
+        model = _make_podsai_model_mock()
+        with patch("run_inference.get_model_inference", return_value=model) as load_model:
+            run_inference(
+                "sample.wav",
+                model_type="podsai",
+                model_path="model.onnx",
+            )
+
+        load_model.assert_called_once_with(
+            model_type="podsai",
+            model_path="model.onnx",
+            feature_extractor="davethaler/whale-call-detector",
+            model_revision=LATEST_PODSAI_MODEL_REVISION,
+        )
+
     def test_returns_expected_keys(self):
         """run_inference returns probabilities, labels, confidence, but NOT proposed_description."""
         wav_path = _make_wav()
@@ -926,6 +964,32 @@ class TestMainCLI:
         finally:
             Path(wav_path).unlink(missing_ok=True)
 
+    def test_main_forwards_feature_extractor_option(self):
+        wav_path = _make_wav()
+        try:
+            with patch(
+                "sys.argv",
+                [
+                    "run_inference.py",
+                    wav_path,
+                    "--model",
+                    "podsai",
+                    "--model-path",
+                    "model.onnx",
+                    "--feature-extractor",
+                    "example/extractor",
+                ],
+            ), patch(
+                "run_inference.run_inference", return_value={}
+            ) as invoke, patch("run_inference.print_results"):
+                from run_inference import main
+
+                assert main() == 0
+
+            assert invoke.call_args.kwargs["feature_extractor"] == "example/extractor"
+        finally:
+            Path(wav_path).unlink(missing_ok=True)
+
     def test_main_downloads_wav_from_node_name_and_timestamp(self):
         """main() can download wav when --node-name and --end-timestamp-str are provided."""
         wav_path = _make_wav()
@@ -1205,6 +1269,17 @@ class TestIntegrationWithRealModels:
         """Path to local PODS-AI model or a pinned Hub snapshot fallback."""
         return _resolve_podsai_test_model_path()
 
+    @pytest.fixture
+    def podsai_onnx_model_path(self) -> str:
+        """Path to an exported PODS-AI ONNX model, when available."""
+        path = Path("podsai.onnx")
+        if not path.is_file():
+            pytest.skip(f"ONNX model not found at {path}")
+        pytest.importorskip(
+            "onnxruntime", reason="ONNX Runtime is required for ONNX inference"
+        )
+        return str(path)
+
     # Fixtures for test wav files (one per audio type).
     def _get_testing_wav_path(self, category: str) -> str:
         """Download (if needed) and return one testing wav path for the given category.
@@ -1344,6 +1419,38 @@ class TestIntegrationWithRealModels:
 
         _verify_podsai_result_structure(result)
         # Always require exact match - no category matching allowed.
+        _verify_podsai_prediction(result, label, allow_category_match=False)
+        _print_podsai_result(result, label)
+
+    # Parametrized tests for the exported PODS-AI ONNX model on different audio types.
+    @pytest.mark.parametrize("label,wav_file,xfail_reason", [
+        ("resident", "rpi-sunset-bay_2026_01_08_01_52_39_PST.wav", None),
+        ("transient", "rpi-orcasound-lab_2025_01_02_10_12_24_PST.wav", None),
+        ("humpback", "rpi-orcasound-lab_2025_01_05_21_18_05_PST.wav", None),
+        ("vessel", "rpi-orcasound-lab_2025_11_30_12_53_54_PST.wav", None),
+        ("water", "rpi-bush-point_2025_06_29_18_23_17_PST.wav", "PODS-AI model may misclassify water as vessel"),
+        ("human", "rpi-sunset-bay_2024_07_19_12_50_08_PST.wav", None),
+        ("jingle", "rpi-bush-point_2026_07_19_09_54_48_PST.wav", None),
+        ("bird", "rpi-bush-point_2026_08_09_17_36_48_PST.wav", "PODS-AI model may misclassify bird as jingle"),
+    ])
+    def test_podsai_onnx_model_inference(
+        self,
+        label: str,
+        wav_file: str,
+        xfail_reason: Optional[str],
+        podsai_onnx_model_path: str,
+        request: pytest.FixtureRequest
+    ) -> None:
+        """Test exported PODS-AI ONNX inference on various audio types."""
+
+        if xfail_reason:
+            request.node.add_marker(pytest.mark.xfail(reason=xfail_reason, strict=False))
+
+        result = model_inference_helper(
+            label, wav_file, "podsai", podsai_onnx_model_path
+        )
+
+        _verify_podsai_result_structure(result)
         _verify_podsai_prediction(result, label, allow_category_match=False)
         _print_podsai_result(result, label)
 

@@ -21,12 +21,12 @@ python src/compare_models.py [options]
 | --- | --- |
 | `--wav-dir PATH` | Root directory of category subdirectories. Default: `output/testing-wav`. |
 | `--models MODEL_LIST` | Comma-separated built-in names. Include `custom` to evaluate the custom PODS-AI model. Default: `fastai,orcahello,wav2vec2,oldpodsai,podsai`. |
-| `--custom-model-path PATH_OR_HF_ID` | Local custom model file/directory or Hugging Face repository ID. Required when `custom` is in `--models`; supplying it without `custom` adds `custom` automatically. |
+| `--custom-model-path PATH_OR_HF_ID` | Local custom model file/directory, PODS-AI-compatible ONNX file, or Hugging Face repository ID. Required when `custom` is in `--models`; supplying it without `custom` adds `custom` automatically. |
 | `--custom-model-revision REVISION` | Optional revision for a custom Hugging Face model. Ignored for local paths. |
 | `--fastai-model-path PATH` | FastAI model directory. Default: `model`. |
-| `--orcahello-model-path PATH_OR_HF_ID` | OrcaHello model path or Hub ID. Default: `orcasound/orcahello-srkw-detector-v1`. |
+| `--orcahello-model-path PATH_OR_HF_ID` | OrcaHello model path, PODS-AI-compatible ONNX file, or Hub ID. Default: `orcasound/orcahello-srkw-detector-v1`. |
 | `--orcahello-model-revision REVISION` | Optional Hugging Face revision for OrcaHello. Used only when `--orcahello-model-path` is a Hub ID. |
-| `--podsai-model-path PATH_OR_HF_ID` | PODS-AI model path or Hub ID for `wav2vec2`, `oldpodsai`, and `podsai`. Default: `davethaler/whale-call-detector`. |
+| `--podsai-model-path PATH_OR_HF_ID` | PODS-AI model path, ONNX file, or Hub ID for `wav2vec2`, `oldpodsai`, and `podsai`. Default: `davethaler/whale-call-detector`. |
 | `--podsai-model-revision REVISION` | Revision for the built-in `podsai` model. |
 | `--max-samples N` | Evaluate at most `N` WAV files. `N` must be positive. |
 | `--category NAME` | Evaluate only the named category. |
@@ -49,10 +49,19 @@ and `bird`.
 ## Custom model specification
 
 The `custom` model name selects the PODS-AI backend. Its value is supplied by
-`--custom-model-path`; the option accepts one local path or one Hugging Face
-repository ID. A command that lists `custom` without a path is rejected. A
-path supplied without `custom` adds `custom` to the model list. Inline values
-such as `custom:./models/my-detector` are not supported.
+`--custom-model-path`; the option accepts one local model path, a compatible
+`.onnx` file, or one Hugging Face repository ID. A command that lists `custom`
+without a path is rejected. A path supplied without `custom` adds `custom` to
+the model list. Inline values such as `custom:./models/my-detector` are not
+supported.
+
+For ONNX inference, install the optional dependencies from
+`requirements-onnx.txt`. For example, to compare the standard PODS-AI model
+against an ONNX model:
+
+```text
+python src/compare_models.py --models podsai,custom --custom-model-path podsai.onnx
+```
 
 Custom models are PODS-AI-compatible multi-class models. They use the same
 category-membership evaluation as `wav2vec2`, `oldpodsai`, and `podsai`,

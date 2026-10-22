@@ -193,7 +193,8 @@ def run_inference(wav_path: str, model_type: str = "podsai",
                   model_revision: Optional[str] = None,
                   model_variant: str = "ast",
                   inference_model: Optional[Any] = None,
-                  start_time_utc: Optional[datetime] = None) -> dict:
+                  start_time_utc: Optional[datetime] = None,
+                  feature_extractor: Optional[str] = None) -> dict:
     """
     Run inference on a wav file and return per-class probabilities.
 
@@ -208,6 +209,7 @@ def run_inference(wav_path: str, model_type: str = "podsai",
                         Only used when model_path is a Hub model ID (not a local path).
                         Defaults to LATEST_PODSAI_MODEL_REVISION when model_path is the default
                         PODS-AI Hub model.
+        feature_extractor: Feature extractor/config path or Hub ID when model_path is an ONNX file.
         model_variant: PODS-AI model variant to use when model_type is "podsai"
                        and the default PODS-AI Hub model/revision is being used
                        (model_path and model_revision are not explicitly set).
@@ -325,15 +327,25 @@ def run_inference(wav_path: str, model_type: str = "podsai",
                 else:
                     model_revision = LATEST_PODSAI_MODEL_REVISION
 
-        model = (
-            inference_model
-            if inference_model is not None
-            else get_model_inference(
+        if inference_model is not None:
+            model = inference_model
+        elif isinstance(model_path, str) and model_path.lower().endswith(".onnx"):
+            effective_feature_extractor = feature_extractor or PODSAI_MODEL_ID
+            effective_revision = model_revision
+            if feature_extractor is None and effective_revision is None:
+                effective_revision = LATEST_PODSAI_MODEL_REVISION
+            model = get_model_inference(
+                model_type="podsai",
+                model_path=model_path,
+                feature_extractor=effective_feature_extractor,
+                model_revision=effective_revision,
+            )
+        else:
+            model = get_model_inference(
                 model_type="podsai",
                 model_path=model_path,
                 model_revision=model_revision,
             )
-        )
 
         start_time = time.perf_counter()
         result = model.predict(wav_path)
@@ -535,6 +547,12 @@ def main() -> int:
             f"the default PODS-AI model ({PODSAI_MODEL_ID!r})."
         ),
     )
+    parser.add_argument(
+        "--feature-extractor",
+        default=None,
+        metavar="PATH_OR_HF_ID",
+        help="Feature extractor/config to use when --model-path is an ONNX file.",
+    )
 
     args = parser.parse_args()
     end_timestamp_str = args.end_timestamp_str
@@ -611,6 +629,7 @@ def main() -> int:
                 model_revision=args.model_revision,
                 model_variant=args.type,
                 start_time_utc=start_time_utc,
+                feature_extractor=args.feature_extractor,
             )
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)

@@ -34,6 +34,7 @@ jobs:
           filters: |
             src:
               - 'requirements.txt'
+              - 'requirements-onnx.txt'
               - 'output/csv/**'
               - 'bootstrap/src/**'
               - 'bootstrap/csv/**'
@@ -81,7 +82,7 @@ jobs:
         uses: fkirc/skip-duplicate-actions@b974a9395958c231af965b70070979a577efa578  # v5.3.2
         with:
           cancel_others: 'false'
-          paths: '["requirements.txt", "output/csv/**", "bootstrap/src/**", "bootstrap/csv/**", "tests/**", "src/**", ".github/workflows/run_tests.yml"]'
+          paths: '["requirements.txt", "requirements-onnx.txt", "output/csv/**", "bootstrap/src/**", "bootstrap/csv/**", "tests/**", "src/**", ".github/workflows/run_tests.yml"]'
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         if: steps.skip_check.outputs.should_skip != 'true'
@@ -120,6 +121,16 @@ jobs:
           mkdir -p model
           curl -o model.zip https://trainedproductionmodels.blob.core.windows.net/dnnmodel/11-15-20.FastAI.R1-12.zip
           unzip model.zip -d .
+
+      - name: Install ONNX dependencies
+        if: steps.skip_check.outputs.should_skip != 'true'
+        run: pip install -r requirements-onnx.txt
+
+      - name: Export PODS-AI ONNX model
+        if: steps.skip_check.outputs.should_skip != 'true'
+        run: |
+          revision="$(python -c 'from src.model_revisions import LATEST_PODSAI_MODEL_REVISION; print(LATEST_PODSAI_MODEL_REVISION)')"
+          python src/export_podsai_onnx.py --revision "$revision" --out podsai.onnx
 
       - name: Run unit tests
         if: steps.skip_check.outputs.should_skip != 'true'
@@ -178,7 +189,7 @@ jobs:
         uses: fkirc/skip-duplicate-actions@b974a9395958c231af965b70070979a577efa578  # v5.3.2
         with:
           cancel_others: 'false'
-          paths: '["requirements.txt", "output/csv/**", "bootstrap/src/**", "bootstrap/csv/**", "tests/**", "src/**", ".github/workflows/run_tests.yml"]'
+          paths: '["requirements.txt", "requirements-onnx.txt", "output/csv/**", "bootstrap/src/**", "bootstrap/csv/**", "tests/**", "src/**", ".github/workflows/run_tests.yml"]'
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         if: steps.skip_check.outputs.should_skip != 'true'
@@ -217,6 +228,18 @@ jobs:
           New-Item -ItemType Directory -Force -Path model
           Invoke-WebRequest -Uri https://trainedproductionmodels.blob.core.windows.net/dnnmodel/11-15-20.FastAI.R1-12.zip -OutFile model.zip
           Expand-Archive -Path model.zip -DestinationPath . -Force
+
+      - name: Install ONNX dependencies
+        if: steps.skip_check.outputs.should_skip != 'true'
+        run: pip install -r requirements-onnx.txt
+
+      - name: Export PODS-AI ONNX model
+        if: steps.skip_check.outputs.should_skip != 'true'
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          $revision = python -c "from src.model_revisions import LATEST_PODSAI_MODEL_REVISION; print(LATEST_PODSAI_MODEL_REVISION)"
+          python src/export_podsai_onnx.py --revision $revision --out podsai.onnx
 
       - name: Run unit tests
         if: steps.skip_check.outputs.should_skip != 'true'

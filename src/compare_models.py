@@ -647,7 +647,7 @@ def main() -> int:
         default=None,
         metavar="PATH_OR_HF_ID",
         help=(
-            "Local path or Hugging Face model ID for the custom model. "
+            "Local path, Hugging Face model ID, or PODS-AI-compatible ONNX file for the custom model. "
             "Providing this option automatically adds custom to --models."
         ),
     )
@@ -672,7 +672,7 @@ def main() -> int:
         "--orcahello-model-path",
         default="orcasound/orcahello-srkw-detector-v1",
         help=(
-            "Path or HuggingFace Hub ID for the OrcaHello model. "
+            "Path, HuggingFace Hub ID, or PODS-AI-compatible ONNX file for the model. "
             "Defaults to orcasound/orcahello-srkw-detector-v1 when not specified."
         ),
     )
@@ -690,7 +690,7 @@ def main() -> int:
         "--podsai-model-path",
         default=PODSAI_MODEL_ID,
         help=(
-            "Path to PODS-AI model directory or HuggingFace Hub ID. "
+            "Path to PODS-AI model directory, HuggingFace Hub ID, or PODS-AI-compatible ONNX file. "
             "Used by wav2vec2 (Wav2Vec2), oldpodsai (AST), and podsai (AST). "
             f"Defaults to {PODSAI_MODEL_ID!r} when not specified."
         ),
@@ -703,6 +703,12 @@ def main() -> int:
             "Only used when --podsai-model-path is a Hub model ID. "
             f"Defaults to the pinned revision ({LATEST_PODSAI_MODEL_REVISION})."
         ),
+    )
+    parser.add_argument(
+        "--feature-extractor",
+        default=None,
+        metavar="PATH_OR_HF_ID",
+        help="Feature extractor/config to use with an ONNX file (defaults to the PODS-AI model).",
     )
     parser.add_argument(
         "--max-samples",
@@ -811,23 +817,46 @@ def main() -> int:
     results = []
     for model_type, inference_model_type, custom_path in model_specs:
         print(f"Evaluating model: {model_type}")
-        effective_model_path = custom_path or model_paths[model_type]
-        if custom_path:
+        effective_model_path = custom_path or model_paths.get(model_type)
+        is_custom_model = model_type == "custom"
+        is_onnx_format = (
+            isinstance(effective_model_path, str)
+            and effective_model_path.lower().endswith(".onnx")
+        )
+        if is_onnx_format and not Path(effective_model_path).is_file():
+            print(f"ONNX file not found: {effective_model_path}", file=sys.stderr)
+            return 1
+        if is_onnx_format:
+            effective_revision = args.podsai_model_revision
+        elif is_custom_model:
             effective_revision = (
                 None if custom_path_is_local else args.custom_model_revision
             )
         else:
-            effective_revision = model_revisions[model_type]
+            effective_revision = model_revisions.get(model_type)
+        if is_onnx_format:
+            inference_model_type = "podsai"
         try:
+            # ONNX inference uses the PODS-AI feature extractor/configuration.
+            kwargs = {}
+            kwargs["model_revision"] = effective_revision
+            if is_onnx_format:
+                # Prefer an explicit extractor, then the configured PODS-AI model,
+                # unless that path is itself an ONNX file.
+                fe = args.feature_extractor or model_paths.get("podsai")
+                if isinstance(fe, str) and fe.lower().endswith(".onnx"):
+                    fe = None
+                fe = fe or PODSAI_MODEL_ID
+                kwargs['feature_extractor'] = fe
             inference_model = get_model_inference(
                 model_type=inference_model_type,
                 model_path=effective_model_path,
-                model_revision=effective_revision,
+                **kwargs,
             )
-            if custom_path:
+            if is_custom_model:
                 validate_inference_model(inference_model, model_type)
         except MODEL_LOAD_ERRORS as exc:
-            if custom_path:
+            if is_custom_model:
                 print(
                     f"Error loading custom model {custom_path!r}: "
                     "the model must be compatible with the PODS-AI inference "
