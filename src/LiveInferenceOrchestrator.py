@@ -29,7 +29,7 @@ COSMOSDB_CONTAINER_NAME = "metadata"
 
 ORCASOUND_S3_BUCKET = "audio-orcasound-net"
 
-NEGATIVE_LABELS = {"abiotic", "other", "water", "vessel", "jingle", "human", "bird"}
+NEGATIVE_LABELS = {"abiotic", "other", "water", "vessel", "jingle", "human", "bird", "hum"}
 
 PODSAI_MODEL_ID = "davethaler/whale-call-detector"
 from model_revisions import LATEST_PODSAI_MODEL_REVISION

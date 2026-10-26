@@ -132,6 +132,18 @@ class TestGetCorrectedClass:
         """'Electrical' noise mentioned in comments resolves to 'hum'."""
         assert get_corrected_class("Electrical noise, nothing else.", None) == "hum"
 
+    def test_comments_electric_keyword_returns_hum(self):
+        """'Electric' (without the '-al' suffix) resolves to 'hum'."""
+        assert get_corrected_class("Electric buzz, nothing else.", None) == "hum"
+
+    def test_comments_60_hz_with_space_returns_hum(self):
+        """'60 Hz' (with a space) resolves to 'hum'."""
+        assert get_corrected_class("60 Hz interference, nothing else.", None) == "hum"
+
+    def test_comments_60_hz_with_hyphen_returns_hum(self):
+        """'60-Hz' (with a hyphen) resolves to 'hum'."""
+        assert get_corrected_class("60-Hz interference, nothing else.", None) == "hum"
+
     def test_comments_hum_does_not_match_inside_humpback(self):
         """'hum' must not match as a substring of 'humpback' in free-text comments."""
         assert get_corrected_class("Humpback calls amid electrical hum.", None) == "humpback"
@@ -143,6 +155,10 @@ class TestGetCorrectedClass:
     def test_comments_electrical_alongside_negated_humpback_returns_hum(self):
         """An explicit 'electrical' mention still resolves to 'hum' even alongside an unrelated, negated 'No humpback'."""
         assert get_corrected_class("Electrical noise. No humpback nor vessel.", None) == "hum"
+
+    def test_comments_humming_returns_hum(self):
+        """Inflected forms like 'humming' still resolve to 'hum'."""
+        assert get_corrected_class("Constant humming in background.", None) == "hum"
 
 
 class TestAppendManualSamples:

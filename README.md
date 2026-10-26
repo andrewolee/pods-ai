@@ -226,7 +226,7 @@ The active scripts in `src` include:
   to Azure Blob Storage and Cosmos DB.
 - [**compare_models.py**](docs/compare-models.md): Evaluates and compares fastai, orcahello, podsai (AST), and oldpodsai (Wav2Vec2) models
   on the test set loaded from `output/csv/testing_60s_samples.csv` and downloaded by `download_wavs.py`.
-  Abiotic samples accept water, vessel, and jingle predictions as correct.
+  Abiotic samples accept water, vessel, jingle, and hum predictions as correct.
   Reports correct identifications, false positives, false negatives, and average prediction time for each model.
 
 Bootstrap-only generation scripts and archived CSV inputs now live under [`bootstrap/`](bootstrap/README.md).

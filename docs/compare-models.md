@@ -44,7 +44,7 @@ Built-in model names map to these inference backends:
 Unknown names cause an error before model loading. The WAV directory must
 exist and contain at least one category WAV file. Supported background
 categories include `other`, `abiotic`, `water`, `vessel`, `jingle`, `human`,
-and `bird`.
+`bird`, and `hum`.
 
 ## Custom model specification
 
@@ -84,7 +84,7 @@ input and result contract is:
   positive-event threshold is 2, scaled down for shorter clips.
 - The Hugging Face audio-classification configuration provides `id2label` and
   `label2id` and includes at least one supported background label: `other`,
-  `abiotic`, `water`, `vessel`, `jingle`, `human`, or `bird`.
+  `abiotic`, `water`, `vessel`, `jingle`, `human`, `bird`, or `hum`.
 - The prediction mapping contains `global_prediction_label`,
   `global_confidence`, `local_predictions`, `local_confidences`, and
   `per_class_probabilities`. `global_prediction_labels` may also be present.
@@ -115,9 +115,10 @@ not printed by the CLI.
 - `wav2vec2`, `oldpodsai`, `podsai`, and `custom` use the expected category's
   membership in `global_prediction_labels`; older output falls back to
   `global_prediction_label`.
-- For an `abiotic` sample, `water`, `vessel`, and `jingle` predictions also
-  count as correct. Specific ground-truth categories still require a matching
-  prediction. The confusion matrix and whale metrics retain the original labels.
+- For an `abiotic` sample, `water`, `vessel`, `jingle`, and `hum` predictions
+  also count as correct. Specific ground-truth categories still require a
+  matching prediction. The confusion matrix and whale metrics retain the
+  original labels.
 - Macro F1 covers `resident`, `transient`, and `humpback` classes present in
   the evaluated samples, either as the correct class or the predicted class.
 - `[R|T|H]FP%` is the fraction of non-class samples predicted as that class.

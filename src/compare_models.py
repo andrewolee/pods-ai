@@ -39,7 +39,7 @@ from model_revisions import (
 from run_inference import run_inference
 
 RESIDENT_LABEL = "resident"
-ABIOTIC_LABELS = {"abiotic", "water", "vessel", "jingle"}
+ABIOTIC_LABELS = {"abiotic", "water", "vessel", "jingle", "hum"}
 WHALE_CLASS_NAMES = {"humpback", "resident", "transient"}
 BACKGROUND_LABELS = {
     "abiotic", "bird", "hum", "human", "jingle", "other", "vessel", "water"
@@ -603,7 +603,7 @@ def print_summary(results: list[ModelResult]) -> None:
     print("Definitions:")
     print("  Accuracy     = Correct / Evaluated")
     print("  Correct      = fastai/orcahello: resident vs other; wav2vec2/oldpodsai/podsai/custom: category in prediction set")
-    print("                 abiotic also accepts water, vessel, or jingle")
+    print("                 abiotic also accepts water, vessel, jingle, or hum")
     print("  F1           = macro F1 over humpback, resident, and transient classes that are present")
     print("  [R|T|H]FP%   = among non-[R|T|H] samples, fraction predicted as that class")
     print("  [R|T|H]FN%   = among actual samples of that class, fraction predicted as another class")
@@ -725,7 +725,7 @@ def main() -> int:
         help=(
             "Only test samples from this category. "
             "If not specified, all categories are tested. "
-            "Categories: abiotic, water, resident, transient, humpback, vessel, jingle, human, bird."
+            "Categories: abiotic, water, resident, transient, humpback, vessel, jingle, human, bird, hum."
         ),
     )
 

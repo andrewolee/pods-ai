@@ -253,7 +253,9 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
         raise ValueError(f"Dataset too small for train/test split: only {len(audio_files)} sample(s) found. Need at least 2 samples.")
 
     num_unique_labels = len(label_counts)
-    estimated_test_size = round(TRAIN_TEST_SPLIT_TEST_SIZE * len(audio_files))
+    # Mirror datasets.Dataset.train_test_split's own rounding (ceil), not round(),
+    # so this estimate matches the actual test-split size it will produce.
+    estimated_test_size = math.ceil(TRAIN_TEST_SPLIT_TEST_SIZE * len(audio_files))
     can_stratify = can_stratify_split(
         num_unique_labels, min_samples_per_label, estimated_test_size
     )

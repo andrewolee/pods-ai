@@ -57,8 +57,8 @@ VESSEL_TERMS = ("vessel", "ship", "boat", "train")
 OTHER_TERMS = ("seal","sea lion")
 # "hum" uses a word-boundary regex, not a plain substring check, since
 # "humpback"/"human" both start with "hum" (see HUM_WORD_PATTERN below).
-HUM_TERMS = ("electrical", "60hz")
-HUM_WORD_PATTERN = re.compile(r"\bhum\b")
+HUM_TERMS = ("electric", "60hz", "60 hz", "60-hz")
+HUM_WORD_PATTERN = re.compile(r"\bhum(?:s|ming|med)?\b")
 # Priority mirrors podsai_inference.py's live prediction ordering: whale
 # species > sporadic noise (negative) > constant background noise.
 WHALE_CLASSES = {"resident", "transient", "humpback"}
@@ -86,6 +86,9 @@ def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
     """
     if tags:
         normalized_tags = [tag.strip().lower() for tag in tags.split(";")]
+        normalized_tags = [
+            "hum" if tag in HUM_TAG_ALIASES else tag for tag in normalized_tags
+        ]
 
         # Priority order regardless of tag position: see constants above.
         for normalized_tag in normalized_tags:
@@ -97,8 +100,6 @@ def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
                 return normalized_tag
 
         for normalized_tag in normalized_tags:
-            if normalized_tag in HUM_TAG_ALIASES:
-                return "hum"
             if normalized_tag in BACKGROUND_CLASSES:
                 return normalized_tag
         return "water"

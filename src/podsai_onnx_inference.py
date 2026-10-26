@@ -131,7 +131,7 @@ class PodsAIOnnxInference(ModelInference):
                 self.label2id = {}
 
         self.negative_label_names = {
-            "abiotic", "bird", "human", "jingle", "other", "vessel", "water"
+            "abiotic", "bird", "hum", "human", "jingle", "other", "vessel", "water"
         }
         self.negative_class_ids = {
             self.label2id[name]
@@ -446,7 +446,7 @@ class PodsAIOnnxInference(ModelInference):
         }
         background_ids = {
             self.label2id[name]
-            for name in {"abiotic", "other", "water", "vessel", "human"}
+            for name in {"abiotic", "other", "water", "vessel", "human", "hum"}
             if name in self.label2id
         }
         positive_ids = set(seen_local_ids) - negative_ids - background_ids
