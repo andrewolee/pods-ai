@@ -59,6 +59,7 @@ OTHER_TERMS = ("seal","sea lion")
 # "humpback"/"human" both start with "hum" (see HUM_WORD_PATTERN below).
 HUM_TERMS = ("electric", "60hz", "60 hz", "60-hz")
 HUM_WORD_PATTERN = re.compile(r"\bhum(?:s|ming|med)?\b")
+NO_HUM_PATTERN = re.compile(r"\b(?:no|not|nor)\s+hum(?:s|ming|med)?\b")
 # Priority mirrors podsai_inference.py's live prediction ordering: whale
 # species > sporadic noise (negative) > constant background noise.
 WHALE_CLASSES = {"resident", "transient", "humpback"}
@@ -117,6 +118,7 @@ def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
     # Detect explicit negations before checking for positive keywords.
     no_humpback = any(term in text for term in NO_HUMPBACK_TERMS)
     no_vessel = any(term in text for term in NO_VESSEL_TERMS)
+    no_hum = bool(NO_HUM_PATTERN.search(text))
 
     if any(term in text for term in RESIDENT_TERMS):
         return "resident"
@@ -130,7 +132,7 @@ def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
         return "jingle"
     if any(term in text for term in HUMAN_TERMS):
         return "human"
-    if any(term in text for term in HUM_TERMS) or HUM_WORD_PATTERN.search(text):
+    if (any(term in text for term in HUM_TERMS) or HUM_WORD_PATTERN.search(text)) and not no_hum:
         return "hum"
     if any(term in text for term in VESSEL_TERMS) and not no_vessel:
         return "vessel"

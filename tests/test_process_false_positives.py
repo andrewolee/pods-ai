@@ -144,6 +144,18 @@ class TestGetCorrectedClass:
         """'60-Hz' (with a hyphen) resolves to 'hum'."""
         assert get_corrected_class("60-Hz interference, nothing else.", None) == "hum"
 
+    def test_comments_negated_hum_falls_through_to_vessel(self):
+        """'No hum' must not override an explicit vessel/boat signal."""
+        assert get_corrected_class("No hum. Boat noise.", None) == "vessel"
+
+    def test_comments_negated_hum_alone_returns_water(self):
+        """'No hum' with no other positive signal resolves to 'water'."""
+        assert get_corrected_class("No hum. Nothing else.", None) == "water"
+
+    def test_comments_no_humpback_does_not_falsely_negate_unrelated_hum(self):
+        """Negating 'humpback' must not suppress an unrelated, explicit hum signal."""
+        assert get_corrected_class("No humpback. Electrical hum present.", None) == "hum"
+
     def test_comments_hum_does_not_match_inside_humpback(self):
         """'hum' must not match as a substring of 'humpback' in free-text comments."""
         assert get_corrected_class("Humpback calls amid electrical hum.", None) == "humpback"

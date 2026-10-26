@@ -118,7 +118,6 @@ F1_METRIC = _load_metric("f1")
 WHALE_CLASS_NAMES = {"humpback", "resident", "transient"}
 CHECKPOINT_SAVE_LIMIT = 6
 DEFAULT_MAX_PREPROCESSING_WORKERS = 8
-TRAIN_TEST_SPLIT_TEST_SIZE = 0.2
 
 
 class FeatureExtractorProtocol(Protocol):
@@ -142,7 +141,7 @@ def setup_label_mappings(num_classes: int) -> None:
     Set up label mappings based on number of classes.
 
     Args:
-        num_classes: 2 for binary (other vs call), 9 for multi-class including "hum"
+        num_classes: 2 for binary (other vs call), 9 for multi-class
     """
     global LABEL2ID, ID2LABEL
 
@@ -172,11 +171,11 @@ def can_stratify_split(num_unique_labels: int, min_samples_per_label: int, estim
     Returns:
         True if stratification is possible, i.e. there are at least 2 unique
         labels, each label has at least 2 samples, and the test split itself
-        is large enough to hold at least one sample per label.  A freshly-added
-        category (e.g. "hum") may start with very few samples, and with many
-        classes a small test split can end up smaller than the number of
-        classes, which ``train_test_split``'s ``stratify_by_column`` rejects
-        with a ``ValueError``.
+        is large enough to hold at least one sample per label.  A category
+        with few samples, or many classes relative to dataset size, can leave
+        the test split smaller than the number of classes, which
+        ``train_test_split``'s ``stratify_by_column`` rejects with a
+        ``ValueError``.
     """
     return (
         num_unique_labels > 1
@@ -191,7 +190,7 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
 
     Args:
         data_dir: Path to output/wav directory
-        num_classes: 2 for binary, 9 for multi-class including "hum"
+        num_classes: 2 for binary, 9 for multi-class
 
     Returns:
         DatasetDict with train and test splits
@@ -255,7 +254,7 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
     num_unique_labels = len(label_counts)
     # Mirror datasets.Dataset.train_test_split's own rounding (ceil), not round(),
     # so this estimate matches the actual test-split size it will produce.
-    estimated_test_size = math.ceil(TRAIN_TEST_SPLIT_TEST_SIZE * len(audio_files))
+    estimated_test_size = math.ceil(0.2 * len(audio_files))
     can_stratify = can_stratify_split(
         num_unique_labels, min_samples_per_label, estimated_test_size
     )
@@ -265,11 +264,11 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
         try:
             print("Using stratified train/test split (80/20)")
             dataset = dataset.train_test_split(
-                test_size=TRAIN_TEST_SPLIT_TEST_SIZE, seed=42, stratify_by_column="label"
+                test_size=0.2, seed=42, stratify_by_column="label"
             )
         except ValueError as exc:
             print(f"Warning: stratified split failed ({exc}). Using non-stratified split.")
-            dataset = dataset.train_test_split(test_size=TRAIN_TEST_SPLIT_TEST_SIZE, seed=42)
+            dataset = dataset.train_test_split(test_size=0.2, seed=42)
     else:
         # Cannot use stratification - use random split.
         if num_unique_labels == 1:
@@ -281,7 +280,7 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
                 f"Warning: Test split (~{estimated_test_size} samples) is smaller than the "
                 f"number of classes ({num_unique_labels}). Using non-stratified split."
             )
-        dataset = dataset.train_test_split(test_size=TRAIN_TEST_SPLIT_TEST_SIZE, seed=42)
+        dataset = dataset.train_test_split(test_size=0.2, seed=42)
 
     return dataset
 
@@ -487,7 +486,7 @@ def main() -> None:
         type=int,
         choices=[2, 9],
         default=9,
-        help="Number of classes: 2 for binary (other vs whale), 9 for multi-class including \"hum\" (default: 9)",
+        help="Number of classes: 2 for binary (other vs whale), 9 for multi-class (default: 9)",
     )
     parser.add_argument(
         "--data_dir",
