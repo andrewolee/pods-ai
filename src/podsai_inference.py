@@ -801,7 +801,6 @@ class PodsAIInference(ModelInference):  # Inherit from ModelInference
 
         # Define label groups by name and map to ids when available.
         NEGATIVE_LABEL_NAMES = {"jingle", "bird"}
-        # "hum" is background (constant) rather than negative (sporadic).
         BACKGROUND_LABEL_NAMES = {"abiotic", "other", "water", "vessel", "human", "hum"}
 
         negative_ids_set = {self.label2id[l] for l in NEGATIVE_LABEL_NAMES if l in self.label2id}
