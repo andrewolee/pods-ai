@@ -148,7 +148,7 @@ class TestProcessFalsePositives:
             return_value=[feed],
         ) as mock_get_feeds, patch(
             "process_false_positives.get_model_inference"
-        ), patch("process_false_positives.get_orcahello_detections", return_value=[]):
+        ), patch("process_false_positives.get_machine_detections", return_value=[]):
             summary = process_false_positives(
                 manual_samples_path=tmp_path / "manual_samples.csv",
                 output_dir=tmp_path / "segments",
@@ -184,21 +184,30 @@ class TestProcessFalsePositives:
             print("testing diagnostic")
             return testing_row
 
+        wav_path = tmp_path / "input.wav"
+        wav_path.write_bytes(b"wav")
+
         with patch("process_false_positives.get_model_inference") as mock_get_model, \
              patch("process_false_positives.get_orcasite_feeds_with_retry", return_value=[feed]), \
-             patch("process_false_positives.get_orcahello_detections", return_value=[detection]), \
+             patch("process_false_positives.get_machine_detections", return_value=[detection]), \
+             patch("process_false_positives.download_60s_audio", return_value=str(wav_path)), \
              patch("process_false_positives.add_training_3s_samples") as mock_add_training, \
              patch(
                  "process_false_positives.add_testing_60s_sample",
                  side_effect=add_testing_sample,
              ) as mock_add_testing:
+            mock_get_model.return_value.predict.return_value = {
+                "global_prediction_label": "resident",
+                "global_confidence": 0.91,
+            }
             summary = process_false_positives(
                 manual_samples_path=manual_samples_path,
                 output_dir=tmp_path / "segments",
                 for_training=False,
             )
 
-        mock_get_model.assert_not_called()
+        mock_get_model.assert_called_once()
+        mock_get_model.return_value.predict.assert_called_once_with(str(wav_path))
         mock_add_training.assert_not_called()
         assert mock_add_testing.call_count == 1
         assert mock_add_testing.call_args.kwargs["corrected_class"] == "vessel"
@@ -253,9 +262,18 @@ class TestProcessFalsePositives:
             writer.writeheader()
             writer.writerow(testing_row)
 
-        with patch("process_false_positives.get_orcasite_feeds_with_retry", return_value=[feed]), \
-             patch("process_false_positives.get_orcahello_detections", return_value=[detection]), \
+        wav_path = tmp_path / "input.wav"
+        wav_path.write_bytes(b"wav")
+
+        with patch("process_false_positives.get_model_inference") as mock_get_model, \
+             patch("process_false_positives.get_orcasite_feeds_with_retry", return_value=[feed]), \
+             patch("process_false_positives.get_machine_detections", return_value=[detection]), \
+             patch("process_false_positives.download_60s_audio", return_value=str(wav_path)), \
              patch("process_false_positives.add_testing_60s_sample", return_value=testing_row):
+            mock_get_model.return_value.predict.return_value = {
+                "global_prediction_label": "resident",
+                "global_confidence": 0.91,
+            }
             summary = process_false_positives(
                 manual_samples_path=tmp_path / "manual_testing_samples.csv",
                 output_dir=tmp_path / "segments",
@@ -263,6 +281,8 @@ class TestProcessFalsePositives:
                 destination_samples_path=destination_path,
             )
 
+        mock_get_model.assert_called_once()
+        mock_get_model.return_value.predict.assert_called_once_with(str(wav_path))
         assert summary["appended"] == 0
         assert summary["overlaps"] == 1
         assert not (tmp_path / "manual_testing_samples.csv").exists()
@@ -270,6 +290,40 @@ class TestProcessFalsePositives:
         marker = f"Proposed rows for {destination_path.as_posix()}:"
         proposed_rows = list(csv.DictReader(output.split(marker + "\n", 1)[1].splitlines()))
         assert proposed_rows == []
+
+    def test_testing_mode_skips_when_current_model_is_not_resident(self, tmp_path):
+        """Testing mode should skip rows that the current PODS-AI model no longer flags as resident."""
+        feed = _make_feed()
+        detection = OrcaHelloDetection(
+            id="det_1",
+            feed=feed,
+            timestamp=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            status="rejected",
+            comments="Boat noise from a nearby vessel.",
+            tags="vessel",
+        )
+        wav_path = tmp_path / "input.wav"
+        wav_path.write_bytes(b"wav")
+
+        with patch("process_false_positives.get_model_inference") as mock_get_model, \
+             patch("process_false_positives.get_orcasite_feeds_with_retry", return_value=[feed]), \
+             patch("process_false_positives.get_machine_detections", return_value=[detection]), \
+             patch("process_false_positives.download_60s_audio", return_value=str(wav_path)), \
+             patch("process_false_positives.add_testing_60s_sample") as mock_add_testing:
+            mock_get_model.return_value.predict.return_value = {
+                "global_prediction_label": "water",
+                "global_confidence": 0.91,
+            }
+            summary = process_false_positives(
+                manual_samples_path=tmp_path / "manual_testing_samples.csv",
+                output_dir=tmp_path / "segments",
+                for_training=False,
+            )
+
+        mock_add_testing.assert_not_called()
+        assert summary["not_false_positive"] == 1
+        assert summary["appended"] == 0
+        assert not (tmp_path / "manual_testing_samples.csv").exists()
 
     def test_training_mode_filters_candidate_in_testing_manifest(self, tmp_path):
         """Training candidates overlapping testing samples are not appended."""
@@ -302,7 +356,7 @@ class TestProcessFalsePositives:
         with patch("process_false_positives.DEFAULT_TESTING_SAMPLES_CSV", str(testing_path)), \
              patch("process_false_positives.get_model_inference") as get_model, \
              patch("process_false_positives.get_orcasite_feeds_with_retry", return_value=[feed]), \
-             patch("process_false_positives.get_orcahello_detections", return_value=[detection]), \
+             patch("process_false_positives.get_machine_detections", return_value=[detection]), \
              patch("process_false_positives.download_60s_audio", return_value=str(wav_path)), \
              patch("process_false_positives.add_training_3s_samples", return_value=[segment]):
             get_model.return_value.predict.return_value = {"global_prediction_label": "resident"}
@@ -335,7 +389,7 @@ class TestProcessFalsePositives:
 
         with patch("process_false_positives.get_model_inference") as mock_get_model, \
              patch("process_false_positives.get_orcasite_feeds_with_retry", return_value=[feed]), \
-             patch("process_false_positives.get_orcahello_detections", return_value=[detection]), \
+             patch("process_false_positives.get_machine_detections", return_value=[detection]), \
              patch("process_false_positives.download_60s_audio", return_value=str(wav_path)), \
              patch(
                  "process_false_positives.add_training_3s_samples",
@@ -415,7 +469,7 @@ class TestProcessFalsePositives:
 
         with patch("process_false_positives.get_model_inference") as mock_get_model, \
              patch("process_false_positives.get_orcasite_feeds_with_retry", return_value=[feed]), \
-             patch("process_false_positives.get_orcahello_detections", return_value=[detection]), \
+             patch("process_false_positives.get_machine_detections", return_value=[detection]), \
              patch("process_false_positives.download_60s_audio", return_value=str(wav_path)), \
              patch(
                  "process_false_positives.add_training_3s_samples",
@@ -477,7 +531,7 @@ class TestProcessFalsePositives:
 
         with patch("process_false_positives.get_model_inference") as mock_get_model, \
              patch("process_false_positives.get_orcasite_feeds_with_retry", return_value=[feed]), \
-             patch("process_false_positives.get_orcahello_detections", return_value=[detection]), \
+             patch("process_false_positives.get_machine_detections", return_value=[detection]), \
              patch("process_false_positives.download_60s_audio", return_value=str(wav_path)), \
              patch(
                  "process_false_positives.add_training_3s_samples",
@@ -566,7 +620,7 @@ class TestProcessFalsePositives:
         with patch("process_false_positives.get_model_inference") as mock_get_model, \
              patch("process_false_positives.get_orcasite_feeds_with_retry", return_value=[feed]), \
              patch(
-                 "process_false_positives.get_orcahello_detections",
+                 "process_false_positives.get_machine_detections",
                  return_value=[next_detection, failed_detection],
              ), \
              patch("process_false_positives.download_60s_audio", return_value=str(wav_path)), \
@@ -632,7 +686,7 @@ class TestProcessFalsePositives:
         with patch("process_false_positives.get_model_inference") as mock_get_model, \
              patch("process_false_positives.get_orcasite_feeds_with_retry", return_value=[feed]), \
              patch(
-                 "process_false_positives.get_orcahello_detections",
+                 "process_false_positives.get_machine_detections",
                  return_value=[matching_detection, non_matching_detection],
              ), \
              patch("process_false_positives.download_60s_audio", return_value=str(wav_path)), \
@@ -697,7 +751,7 @@ class TestProcessFalsePositives:
         with patch("process_false_positives.get_model_inference"), \
              patch("process_false_positives.get_orcasite_feeds_with_retry", return_value=[feed]), \
              patch(
-                 "process_false_positives.get_orcahello_detections",
+                 "process_false_positives.get_machine_detections",
                  return_value=[confirmed, unreviewed, out_of_range],
              ):
             summary = process_false_positives(

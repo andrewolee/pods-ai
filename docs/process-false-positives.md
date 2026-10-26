@@ -1,8 +1,8 @@
 # process_false_positives.py
 
-Re-checks rejected OrcaHello detections by
-downloading the 60-second WAV, re-running PODS-AI, and appending candidate rows to
-the selected manual-samples CSV (training defaults to
+Re-checks rejected machine-predicted (whether from PODS-AI or another model)
+resident detections by downloading the 60-second WAV, re-running PODS-AI, and
+appending candidate rows to the selected manual-samples CSV (training defaults to
 `output/csv/new_manual_training_samples.csv`; use `--set testing` for
 `output/csv/new_manual_testing_samples.csv`).
 
