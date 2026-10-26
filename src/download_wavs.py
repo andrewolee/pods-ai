@@ -128,17 +128,14 @@ def _training_window(row: CSVRow) -> tuple[datetime, datetime]:
 
 
 def _testing_window(row: CSVRow) -> tuple[datetime, datetime]:
-    sample_start = parse_timestamp_pst(row.timestamp_pst)
-    min_end_time = sample_start + timedelta(seconds=TESTING_WINDOW_SECONDS)
-
-    # Mirror audio_utils.download_60s_audio() behavior: snap end time to the next 10-second boundary.
-    snapped_sec = ((min_end_time.second + 9) // 10) * 10
-    if snapped_sec == 60:
-        min_end_time = min_end_time + timedelta(minutes=1)
-        snapped_sec = 0
-    end_time = min_end_time.replace(second=snapped_sec, microsecond=0)
-
-    return end_time - timedelta(seconds=TESTING_WINDOW_SECONDS), end_time
+    """
+    Return the full-recording interval represented by a testing row.
+    The row is assumed to already be aligned with the OrcaHello
+    detection timestamp, so the interval is simply the 60-second
+    window starting at the row's timestamp.
+    """
+    start = parse_timestamp_pst(row.timestamp_pst)
+    return start, start + timedelta(seconds=TESTING_WINDOW_SECONDS)
 
 
 def _dclde_window(row: CSVRow) -> tuple[datetime, datetime]:
@@ -1034,20 +1031,17 @@ def download_testing_file(expected_path: Path, output_root: Path, cache_root: Pa
 
     node_name, timestamp_pst = parse_node_and_timestamp_from_filename(expected_path)
 
-    min_end_timestamp_pst_str = add_seconds_to_timestamp_pst(
-        timestamp_pst,
-        TESTING_WINDOW_SECONDS,
-    )
-
-    print(f"  Downloading audio ending shortly after {min_end_timestamp_pst_str}...")
+    start_time_utc = parse_timestamp_pst(timestamp_pst).astimezone(dt_timezone.utc)
+    print(f"  Downloading {TESTING_WINDOW_SECONDS}-second audio from {timestamp_pst}...")
 
     with TemporaryDirectory() as tmp_dir:
-        from audio_utils import download_60s_audio
+        from audio_utils import download_audio_from_start_utc
 
-        wav_path = download_60s_audio(
+        wav_path = download_audio_from_start_utc(
             node_name=node_name,
-            min_end_timestamp_pst_str=min_end_timestamp_pst_str,
+            start_time_utc=start_time_utc,
             tmp_dir=tmp_dir,
+            duration_seconds=TESTING_WINDOW_SECONDS,
         )
         if wav_path is None:
             raise AssertionError(f"Error: Failed to download 60-second clip for {node_name} at {timestamp_pst}")
@@ -1226,8 +1220,14 @@ def run_download_wavs(
         if missing_uri:
             raise ValueError(f"DCLDE manifest contains {missing_uri} row(s) without a URI")
 
-    validate_no_overlaps(training_rows, testing_rows, dclde_rows)
+    # First verify that all testing rows are aligned with OrcaHello timestamps.
     validate_aligned_entries(testing_rows)
+
+    # Now we know the testing row timestamps are directly comparable to training row timestamps,
+    # so we can check for overlaps between them.
+    # TODO(issue #550): Verify whether dclde_rows have the correct timestamp or need correction first.
+    validate_no_overlaps(training_rows, testing_rows, dclde_rows)
+
     validate_uri_timestamps(training_rows + testing_rows)
 
     validate_node_slug_in_uri(testing_rows + dclde_rows)

@@ -8,7 +8,7 @@ remove when non-adjacent high-confidence (>0.80) whale segments are found.
 ```
 usage: process_testing_set_mispredictions.py [-h] [--testing-csv TESTING_CSV] [--wav-dir WAV_DIR]
                                              [--model-path MODEL_PATH] [--model-revision MODEL_REVISION]
-                                             [--min-confidence MIN_CONFIDENCE]
+                                             [--min-confidence MIN_CONFIDENCE] [--category CATEGORY]
 
 Propose training_3s_samples rows from testing_60s_samples mispredictions and list testing rows to remove.
 
@@ -23,4 +23,5 @@ options:
                         Optional model revision for HuggingFace model IDs.
   --min-confidence MIN_CONFIDENCE
                         Minimum local segment confidence required for proposal generation.
+  --category CATEGORY   Process only detections whose actual category matches this value.
 ```

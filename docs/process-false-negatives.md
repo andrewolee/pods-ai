@@ -1,6 +1,6 @@
 # process_false_negatives.py
 
-Re-checks confirmed OrcaHello detections by downloading the 60-second WAV and
+Re-checks confirmed machine detections by downloading the 60-second WAV and
 running PODS-AI inference. By default, it runs OrcaHello segment inference and
 appends 3-second segments where OrcaHello predicts resident but PODS-AI does not
 to `output/csv/new_manual_training_samples.csv` with corrected class `resident`. Use
@@ -17,7 +17,7 @@ usage: process_false_negatives.py [-h] [--set SET] [--feed FEED] [--start YYYY_M
                                   [--orcahello-model-path ORCAHELLO_MODEL_PATH] [--detections-csv DETECTIONS_CSV]
                                   [--category CATEGORY]
 
-Process confirmed OrcaHello detections, find 60-second false negatives where PODS-AI misses resident calls, and append
+Process confirmed machine detections, find 60-second false negatives where PODS-AI misses resident calls, and append
 corrected resident sub-segments or testing samples to the corresponding manual-samples CSV.
 
 options:

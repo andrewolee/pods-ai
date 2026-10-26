@@ -28,6 +28,31 @@ def test_orcahello_factory_forwards_model_revision():
     )
 
 
+def test_onnx_factory_forwards_extractor_and_revision():
+    """The ONNX backend receives the extractor and HF revision options."""
+    from model_inference import get_model_inference
+
+    factory = MagicMock()
+    with patch.dict(
+        "sys.modules",
+        {"podsai_onnx_inference": SimpleNamespace(
+            get_podsai_onnx_inference=factory
+        )},
+    ):
+        get_model_inference(
+            model_path="model.onnx",
+            model_type="podsai",
+            feature_extractor="example/model",
+            model_revision="0123456789abcdef",
+        )
+
+    factory.assert_called_once_with(
+        "model.onnx",
+        feature_extractor="example/model",
+        model_revision="0123456789abcdef",
+    )
+
+
 def test_orcahello_loader_passes_revision_only_for_hub_models(tmp_path):
     """Only Hub model loads receive a requested revision."""
     from orcahello_inference import OrcaHelloSRKWInference

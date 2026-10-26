@@ -167,6 +167,14 @@ namespace DatasetManager
         }
 
         /// <summary>
+        /// Gets the arguments used to run inference on the selected sample.
+        /// </summary>
+        protected virtual string GetInferenceArguments(SampleRecord sample)
+        {
+            return sample.GetWavFilePath(WavFolderPath);
+        }
+
+        /// <summary>
         /// Handles the InferenceRequested event from the SamplesGrid
         /// control.  It runs a Python script to perform inference on
         /// the selected sample and updates the sample's tags and
@@ -176,7 +184,7 @@ namespace DatasetManager
         /// <param name="sample">The sample record for which inference is requested.</param>
         protected async void SamplesGrid_InferenceRequested(object? sender, SampleRecord sample)
         {
-            string result = await RunPythonAsync("src\\run_inference.py", sample.GetWavFilePath(WavFolderPath));
+            string result = await RunPythonAsync("src\\run_inference.py", GetInferenceArguments(sample));
 
             double confidence;
             string tag = FindTagsInOutput("Global prediction: ", result, out confidence);

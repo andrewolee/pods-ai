@@ -74,6 +74,56 @@ def test_multilabel_prediction_counts_matching_species_as_correct():
     assert not is_correct_prediction("humpback", "resident", "podsai", ["resident", "transient"])
 
 
+@pytest.mark.parametrize("model_type", ["podsai", "oldpodsai", "wav2vec2", "custom"])
+@pytest.mark.parametrize("predicted_label", ["water", "vessel", "jingle"])
+@pytest.mark.parametrize("multilabel", [False, True])
+def test_abiotic_accepts_specific_predictions(model_type, predicted_label, multilabel):
+    """Abiotic ground truth accepts its specific sound categories."""
+    from compare_models import is_correct_prediction
+
+    labels = ["other", predicted_label] if multilabel else None
+    primary_label = "other" if multilabel else predicted_label
+    assert is_correct_prediction("abiotic", primary_label, model_type, labels)
+
+
+@pytest.mark.parametrize("predicted_label", ["other", "bird", "human", "resident", "transient", "humpback", ""])
+def test_abiotic_does_not_accept_unrelated_predictions(predicted_label):
+    """The abiotic rule does not accept every background or whale category."""
+    from compare_models import is_correct_prediction
+
+    assert not is_correct_prediction("abiotic", predicted_label, "podsai")
+
+
+def test_specific_categories_still_require_matching_predictions():
+    """Abiotic matching is directional and preserves specific ground truth."""
+    from compare_models import is_correct_prediction
+
+    assert is_correct_prediction("abiotic", "abiotic", "podsai")
+    assert not is_correct_prediction("water", "abiotic", "podsai")
+    assert not is_correct_prediction("water", "vessel", "podsai")
+
+
+def test_evaluate_abiotic_keeps_original_predictions(tmp_path):
+    """Correctness uses abiotic membership without relabeling metric data."""
+    from compare_models import evaluate_model
+
+    wav_dir = tmp_path / "testing-wav"
+    wav_files = _make_wav(wav_dir, "abiotic")
+    prediction = {
+        "global_prediction_label": "jingle",
+        "global_prediction_labels": ["jingle", "resident"],
+        "predict_time": 0.1,
+    }
+    with patch("compare_models.run_inference", return_value=prediction):
+        result = evaluate_model("podsai", None, wav_files, wav_dir)
+
+    assert result.correct == 1
+    assert result.accuracy == 1.0
+    assert result.confusion_matrix == {"abiotic": {"jingle": 1}}
+    assert result.prediction_labels == {"abiotic": [{"jingle", "resident"}]}
+    assert result.false_positive_count_for_label("resident") == 1
+
+
 def test_validate_custom_model_path_expands_tilde(tmp_path, monkeypatch):
     """Existing tilde paths are normalized before they reach the loader."""
     from compare_models import resolve_custom_model_path
@@ -195,6 +245,71 @@ def test_main_forwards_orcahello_model_revision(tmp_path):
         model_revision=revision,
     )
     assert evaluate.call_args.kwargs["model_revision"] == revision
+
+
+@pytest.mark.parametrize(
+    ("model_name", "path_option", "display_name"),
+    [
+        ("custom", "--custom-model-path", "custom"),
+        ("wav2vec2", "--podsai-model-path", "wav2vec2"),
+        ("oldpodsai", "--podsai-model-path", "oldpodsai"),
+        ("podsai", "--podsai-model-path", "podsai"),
+        ("orcahello", "--orcahello-model-path", "orcahello"),
+    ],
+)
+def test_main_loads_onnx_from_model_path_options(tmp_path, model_name, path_option, display_name):
+    """ONNX paths from each model-path option use the PODS-AI ONNX backend."""
+    from compare_models import ModelResult, main
+
+    wav_dir = tmp_path / "testing-wav"
+    _make_wav(wav_dir)
+    onnx_model = tmp_path / "model.onnx"
+    onnx_model.touch()
+    args = [
+        "compare_models.py",
+        "--wav-dir", str(wav_dir),
+        "--models", model_name,
+        path_option, str(onnx_model),
+        "--feature-extractor", "example/extractor",
+        "--max-samples", "1",
+    ]
+    model = type("Model", (), {"predict": lambda self, _: {}})()
+    with patch.object(sys, "argv", args), \
+         patch("compare_models.get_model_inference", return_value=model) as load_model, \
+         patch("compare_models.evaluate_model", return_value=ModelResult(display_name)) as evaluate:
+        assert main() == 0
+
+    load_model.assert_called_once_with(
+        model_type="podsai",
+        model_path=str(onnx_model),
+        feature_extractor="example/extractor",
+        model_revision=LATEST_PODSAI_MODEL_REVISION,
+    )
+    assert evaluate.call_args.kwargs["model_type"] == "podsai"
+    assert evaluate.call_args.kwargs["result_model_type"] == display_name
+    assert evaluate.call_args.kwargs["model_revision"] == LATEST_PODSAI_MODEL_REVISION
+
+
+def test_main_rejects_missing_explicit_onnx_model(tmp_path, capsys):
+    """An explicit ONNX path is not mistaken for an export destination."""
+    from compare_models import main
+
+    wav_dir = tmp_path / "testing-wav"
+    _make_wav(wav_dir)
+    missing_onnx = tmp_path / "missing.onnx"
+    args = [
+        "compare_models.py",
+        "--wav-dir", str(wav_dir),
+        "--models", "podsai",
+        "--podsai-model-path", str(missing_onnx),
+        "--max-samples", "1",
+    ]
+    with patch.object(sys, "argv", args), \
+         patch("compare_models.get_model_inference") as load_model:
+        assert main() == 1
+
+    load_model.assert_not_called()
+    assert "ONNX file not found" in capsys.readouterr().err
 
 
 def test_custom_model_uses_category_membership_for_abiotic():

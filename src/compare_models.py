@@ -17,6 +17,7 @@ A "correct" identification means:
     "resident", or anything other than "resident" when the label is not "resident".
   - For custom, podsai, oldpodsai, and wav2vec2, the actual category is present in the model's
     multi-label prediction set (with a single-label fallback for older models).
+    Abiotic samples also accept water, vessel, or jingle predictions.
 
 For each whale class X (resident, transient, humpback):
   - X false positives are samples predicted as X when the correct label was not X.
@@ -38,6 +39,7 @@ from model_revisions import (
 from run_inference import run_inference
 
 RESIDENT_LABEL = "resident"
+ABIOTIC_LABELS = {"abiotic", "water", "vessel", "jingle"}
 WHALE_CLASS_NAMES = {"humpback", "resident", "transient"}
 BACKGROUND_LABELS = {
     "abiotic", "bird", "hum", "human", "jingle", "other", "vessel", "water"
@@ -377,12 +379,15 @@ def is_correct_prediction(
                           membership determines correctness for binary models. When
                           omitted or empty, the primary ``predicted_label`` is used
                           as a single-label fallback.
+                          Abiotic ground truth also accepts water, vessel, or jingle.
 
     Returns:
         True when the prediction is correct under the model-specific summary rules.
     """
     labels = predicted_labels or [predicted_label]
     if is_exact_match_model(model_type):
+        if actual_label == "abiotic":
+            return bool(ABIOTIC_LABELS.intersection(labels))
         return actual_label in labels
     if actual_label in BACKGROUND_LABELS:
         return RESIDENT_LABEL not in labels
@@ -598,6 +603,7 @@ def print_summary(results: list[ModelResult]) -> None:
     print("Definitions:")
     print("  Accuracy     = Correct / Evaluated")
     print("  Correct      = fastai/orcahello: resident vs other; wav2vec2/oldpodsai/podsai/custom: category in prediction set")
+    print("                 abiotic also accepts water, vessel, or jingle")
     print("  F1           = macro F1 over humpback, resident, and transient classes that are present")
     print("  [R|T|H]FP%   = among non-[R|T|H] samples, fraction predicted as that class")
     print("  [R|T|H]FN%   = among actual samples of that class, fraction predicted as another class")
@@ -641,7 +647,7 @@ def main() -> int:
         default=None,
         metavar="PATH_OR_HF_ID",
         help=(
-            "Local path or Hugging Face model ID for the custom model. "
+            "Local path, Hugging Face model ID, or PODS-AI-compatible ONNX file for the custom model. "
             "Providing this option automatically adds custom to --models."
         ),
     )
@@ -666,7 +672,7 @@ def main() -> int:
         "--orcahello-model-path",
         default="orcasound/orcahello-srkw-detector-v1",
         help=(
-            "Path or HuggingFace Hub ID for the OrcaHello model. "
+            "Path, HuggingFace Hub ID, or PODS-AI-compatible ONNX file for the model. "
             "Defaults to orcasound/orcahello-srkw-detector-v1 when not specified."
         ),
     )
@@ -684,7 +690,7 @@ def main() -> int:
         "--podsai-model-path",
         default=PODSAI_MODEL_ID,
         help=(
-            "Path to PODS-AI model directory or HuggingFace Hub ID. "
+            "Path to PODS-AI model directory, HuggingFace Hub ID, or PODS-AI-compatible ONNX file. "
             "Used by wav2vec2 (Wav2Vec2), oldpodsai (AST), and podsai (AST). "
             f"Defaults to {PODSAI_MODEL_ID!r} when not specified."
         ),
@@ -697,6 +703,12 @@ def main() -> int:
             "Only used when --podsai-model-path is a Hub model ID. "
             f"Defaults to the pinned revision ({LATEST_PODSAI_MODEL_REVISION})."
         ),
+    )
+    parser.add_argument(
+        "--feature-extractor",
+        default=None,
+        metavar="PATH_OR_HF_ID",
+        help="Feature extractor/config to use with an ONNX file (defaults to the PODS-AI model).",
     )
     parser.add_argument(
         "--max-samples",
@@ -805,23 +817,46 @@ def main() -> int:
     results = []
     for model_type, inference_model_type, custom_path in model_specs:
         print(f"Evaluating model: {model_type}")
-        effective_model_path = custom_path or model_paths[model_type]
-        if custom_path:
+        effective_model_path = custom_path or model_paths.get(model_type)
+        is_custom_model = model_type == "custom"
+        is_onnx_format = (
+            isinstance(effective_model_path, str)
+            and effective_model_path.lower().endswith(".onnx")
+        )
+        if is_onnx_format and not Path(effective_model_path).is_file():
+            print(f"ONNX file not found: {effective_model_path}", file=sys.stderr)
+            return 1
+        if is_onnx_format:
+            effective_revision = args.podsai_model_revision
+        elif is_custom_model:
             effective_revision = (
                 None if custom_path_is_local else args.custom_model_revision
             )
         else:
-            effective_revision = model_revisions[model_type]
+            effective_revision = model_revisions.get(model_type)
+        if is_onnx_format:
+            inference_model_type = "podsai"
         try:
+            # ONNX inference uses the PODS-AI feature extractor/configuration.
+            kwargs = {}
+            kwargs["model_revision"] = effective_revision
+            if is_onnx_format:
+                # Prefer an explicit extractor, then the configured PODS-AI model,
+                # unless that path is itself an ONNX file.
+                fe = args.feature_extractor or model_paths.get("podsai")
+                if isinstance(fe, str) and fe.lower().endswith(".onnx"):
+                    fe = None
+                fe = fe or PODSAI_MODEL_ID
+                kwargs['feature_extractor'] = fe
             inference_model = get_model_inference(
                 model_type=inference_model_type,
                 model_path=effective_model_path,
-                model_revision=effective_revision,
+                **kwargs,
             )
-            if custom_path:
+            if is_custom_model:
                 validate_inference_model(inference_model, model_type)
         except MODEL_LOAD_ERRORS as exc:
-            if custom_path:
+            if is_custom_model:
                 print(
                     f"Error loading custom model {custom_path!r}: "
                     "the model must be compatible with the PODS-AI inference "

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) PODS-AI contributors
+# SPDX-License-Identifier: MIT
 """
 Generate a UMAP visualization from an embeddings CSV.
 

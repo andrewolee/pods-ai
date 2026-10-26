@@ -2,9 +2,9 @@
 # Copyright (c) PODS-AI contributors
 # SPDX-License-Identifier: MIT
 """
-Process confirmed OrcaHello SRKW detections into corrected manual samples.
+Process confirmed machine SRKW detections into corrected manual samples.
 
-For each confirmed OrcaHello detection in the selected timeframe, this script:
+For each confirmed detection in the selected timeframe, this script:
 1. Downloads the corresponding 60-second WAV file.
 2. Runs PODS-AI inference on the full WAV.
 3. If PODS-AI predicts resident globally, treats it as not a false negative and skips it.
@@ -33,7 +33,7 @@ from add_samples import (
 from audio_utils import (
     download_60s_audio,
     format_timestamp_pst,
-    get_orcahello_detections,
+    get_machine_detections,
     parse_timestamp_pst,
 )
 from manual_samples_utils import (
@@ -75,7 +75,7 @@ def process_false_negatives(
     destination_samples_path: Optional[Path] = None,
     for_training: bool = True,
 ) -> dict[str, int]:
-    """Process confirmed OrcaHello SRKW detections in the selected timeframe."""
+    """Process confirmed machine SRKW detections in the selected timeframe."""
     summary = {
         "confirmed": 0,
         "download_failed": 0,
@@ -114,10 +114,10 @@ def process_false_negatives(
 
     for feed in feeds:
         print(f"Processing feed {feed.node_name}")
-        for detection in get_orcahello_detections(feed, start_time, end_time):
+        for detection in get_machine_detections(feed, start_time, end_time):
             if detection.status.lower() != "confirmed" or detection.timestamp is None:
                 continue
-            # OrcaHello detections are returned in descending timestamp order.
+            # Detections are returned in descending timestamp order.
             # Once older than start_time, all remaining detections in this feed are older.
             if start_time is not None and detection.timestamp < start_time:
                 break
@@ -128,7 +128,7 @@ def process_false_negatives(
             timestamp_str = format_timestamp_pst(
                 detection.timestamp - timedelta(seconds=AUDIO_OFFSET_SECONDS)
             )
-            print(f"Checking confirmed OrcaHello detection at {timestamp_str}")
+            print(f"Checking confirmed detection at {timestamp_str}")
 
             with TemporaryDirectory() as temp_dir:
                 min_end_timestamp_pst_str = format_timestamp_pst(detection.timestamp + timedelta(seconds=60))
@@ -289,7 +289,7 @@ def main() -> int:
     """Run the false-negative processing CLI."""
     parser = argparse.ArgumentParser(
         description=(
-            "Process confirmed OrcaHello detections, find 60-second false negatives "
+            "Process confirmed machine detections, find 60-second false negatives "
             "where PODS-AI misses resident calls, and append corrected resident "
             "sub-segments to new_manual_training_samples.csv for the training set,"
             "or new_manual_testing_samples.csv for the testing set."

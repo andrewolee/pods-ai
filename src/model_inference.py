@@ -654,6 +654,16 @@ def get_model_inference(model_path: Optional[str] = None, model_type: str = "fas
             )
 
         # Lazy import to avoid circular dependency.
+        # If the provided model_path is an ONNX file, use the ONNX Runtime wrapper.
+        if isinstance(model_path, str) and model_path.lower().endswith('.onnx'):
+            from podsai_onnx_inference import get_podsai_onnx_inference
+            feature_extractor = kwargs.pop('feature_extractor', None)
+            return get_podsai_onnx_inference(
+                model_path,
+                feature_extractor=feature_extractor,
+                **kwargs,
+            )
+
         from podsai_inference import get_podsai_inference
 
         return get_podsai_inference(model_path, **kwargs)

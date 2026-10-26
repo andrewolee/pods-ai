@@ -227,16 +227,16 @@ def get_node_name_for_feed(feed: OrcasiteFeed) -> str:
     return feed.node_name
 
 
-def get_orcahello_detections(
+def get_machine_detections(
     feed: OrcasiteFeed,
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None
 ) -> List[OrcaHelloDetection]:
     """
-    Retrieve OrcaHello detections and return those whose audio URI contains the given feed's node_name.
+    Retrieve machine detections associated with the given feed's node name.
     """
     if not COSMOS_KEY:
-        raise ValueError("COSMOS_KEY environment variable must be set and non-empty to fetch OrcaHello detections")
+        raise ValueError("COSMOS_KEY environment variable must be set and non-empty to fetch machine detections")
 
     node_name = get_node_name_for_feed(feed)
 

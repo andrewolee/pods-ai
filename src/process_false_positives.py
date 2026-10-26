@@ -2,12 +2,13 @@
 # Copyright (c) PODS-AI contributors
 # SPDX-License-Identifier: MIT
 """
-Process rejected OrcaHello resident detections into corrected manual samples.
+Process rejected machine-predicted (whether from PODS-AI or another model)
+resident detections into corrected manual samples.
 
-For each rejected OrcaHello detection in the selected timeframe, this script:
+For each rejected detection in the selected timeframe, this script:
 1. Downloads the corresponding 60-second WAV file.
 2. Runs PODS-AI inference on the full WAV.
-3. Infers the corrected class from the OrcaHello comments.
+3. Infers the corrected class from the detection comments.
 4. Runs add_samples.py on the WAV file.
 5. Appends whale-predicted segments that do not already match the corrected class
    to new_manual_training_samples.csv or new_manual_testing_samples.csv with the
@@ -30,7 +31,7 @@ from audio_utils import (
     SKIP_TERMS,
     download_60s_audio,
     format_timestamp_pst,
-    get_orcahello_detections,
+    get_machine_detections,
     parse_timestamp_pst,
 )
 from manual_samples_utils import (
@@ -78,7 +79,7 @@ NO_VESSEL_TERMS = ("no vessel", "nor vessel", "no boat", "nor boat", "no ship", 
 
 
 def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
-    """Infer the corrected class from OrcaHello moderation tags and comments.
+    """Infer the corrected class from the moderator's tags and comments.
 
     Use tags if available, otherwise infer from comments.  Return None if no class can be inferred.
 
@@ -177,7 +178,7 @@ def process_false_positives(
     end_time: Optional[datetime] = None,
     destination_samples_path: Optional[Path] = None,
 ) -> dict[str, int]:
-    """Process rejected OrcaHello detections in the selected timeframe.
+    """Process rejected machine detections in the selected timeframe.
 
     The returned summary includes ``confirmed`` and ``unreviewed`` counters for
     in-range detections that were not rejected, giving diagnostic context when
@@ -210,13 +211,12 @@ def process_false_positives(
             return summary
 
     existing_uris = load_existing_uris(manual_samples_path)
-    if for_training:
-        print(f"Loading podsai model from {model_path}...")
-        model = get_model_inference(model_type="podsai", model_path=model_path)
+    print(f"Loading podsai model from {model_path}...")
+    model = get_model_inference(model_type="podsai", model_path=model_path)
 
     candidate_rows = []
     for feed in feeds:
-        for detection in get_orcahello_detections(feed, start_time, end_time):
+        for detection in get_machine_detections(feed, start_time, end_time):
             if detection.timestamp is None:
                 continue
             status = detection.status.lower()
@@ -228,7 +228,7 @@ def process_false_positives(
                     else:
                         summary["unreviewed"] += 1
                 continue
-            # OrcaHello detections are returned in descending timestamp order.
+            # Detections are returned in descending timestamp order.
             # Once we are older than the requested start time, the remaining
             # detections for this feed will also be too old.
             if start_time is not None and detection.timestamp < start_time:
@@ -249,22 +249,47 @@ def process_false_positives(
                 continue
 
             with TemporaryDirectory() as temp_dir:
+                # The detection may have been predicted by an earlier PODS-AI model
+                # or another model, so we need to run the current PODS-AI model
+                # inference to see whether it's still a false positive.
                 if not for_training:
-                    testing_start_timestamp = timestamp_str_pst
-                    with redirect_stdout(io.StringIO()):
-                        segment_row = add_testing_60s_sample(
-                            node_name=feed.node_name,
-                            start_timestamp=testing_start_timestamp,
-                            detections_csv=detections_csv,
-                            corrected_class=corrected_class,
-                            fallback_description=detection.comments,
-                            fallback_notes="fp_machine",
-                            fallback_tags=detection.tags,
-                        )
-                    segment_rows = [segment_row]
+                    print(f"Checking rejected detection at {timestamp_str_pst}")
+
+                    min_end_timestamp_pst_str = format_timestamp_pst(detection.timestamp + timedelta(seconds=60))
+                    wav_path = download_60s_audio(node_name=feed.node_name, min_end_timestamp_pst_str=min_end_timestamp_pst_str, tmp_dir=temp_dir)
+                    if wav_path is None:
+                        print(f"Skipping {feed.node_name} {timestamp_str_pst}: failed to download audio.")
+                        summary["download_failed"] += 1
+                        continue
+
+                    try:
+                        inference = model.predict(wav_path)
+                        if inference.get("global_prediction_label") != "resident":
+                            print(
+                                f"Skipping {feed.node_name} {timestamp_str_pst}: "
+                                "PODS-AI global prediction is not resident."
+                            )
+                            summary["not_false_positive"] += 1
+                            continue
+
+                        testing_start_timestamp = timestamp_str_pst
+                        with redirect_stdout(io.StringIO()):
+                            segment_row = add_testing_60s_sample(
+                                node_name=feed.node_name,
+                                start_timestamp=testing_start_timestamp,
+                                detections_csv=detections_csv,
+                                corrected_class=corrected_class,
+                                fallback_description=detection.comments,
+                                fallback_notes="fp_machine",
+                                fallback_tags=detection.tags,
+                            )
+                        segment_rows = [segment_row]
+                    except Exception as exc:
+                        print(f"Skipping {feed.node_name} {timestamp_str_pst}: processing failed ({exc}).")
+                        summary["processing_failed"] += 1
+                        continue
                 else:
-                    # For the training set, we need to run PODS-AI inference on the 60-second WAV to find mismatched whale-class segments.
-                    print(f"Checking rejected OrcaHello detection at {timestamp_str_pst}")
+                    print(f"Checking rejected detection at {timestamp_str_pst}")
 
                     min_end_timestamp_pst_str = format_timestamp_pst(detection.timestamp + timedelta(seconds=60))
                     wav_path = download_60s_audio(node_name=feed.node_name, min_end_timestamp_pst_str=min_end_timestamp_pst_str, tmp_dir=temp_dir)
@@ -404,8 +429,8 @@ def main() -> int:
     """Run the false-positive processing CLI."""
     parser = argparse.ArgumentParser(
         description=(
-            "Process rejected OrcaHello resident detections looking for new training "
-            "or testing samples.  For training samples, re-run PODS-AI on the "
+            "Process rejected machine-predicted resident detections looking for new training "
+            "or testing samples.  For training samples, re-run the current PODS-AI on the "
             "60-second WAV, and append mismatched whale-class sub-segments to "
             "new_manual_training_samples.csv with a corrected class.  For testing "
             "append mismatched whale-class segments to new_manual_testing_samples.csv."

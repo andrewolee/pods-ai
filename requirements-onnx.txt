@@ -1,0 +1,6 @@
+onnx
+onnxscript
+onnxruntime
+onnxruntime-tools
+# Optional: install an optimized runtime provider for your platform, e.g. onnxruntime-openvino or onnxruntime-directml
+# Example (Intel OpenVINO): pip install onnxruntime-openvino
