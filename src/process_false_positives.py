@@ -62,8 +62,14 @@ OTHER_TERMS = ("seal","sea lion")
 # (e.g. "No humpback nor vessel" still contains the substring "hum").
 HUM_TERMS = ("electrical", "60hz")
 HUM_WORD_PATTERN = re.compile(r"\bhum\b")
+# Mirrors the positive/negative/background priority podsai_inference.py uses
+# for live model predictions (see PodsAIInference's ordered_ids construction):
+# a real whale-species tag always wins, then sporadic-event noise, then
+# constant background noise.  "hum" is background since it's typically
+# constant rather than sporadic.
 WHALE_CLASSES = {"resident", "transient", "humpback"}
-OTHER_CLASSES = {"bird", "human", "vessel", "jingle", "water", "other", "hum"}
+NEGATIVE_CLASSES = {"jingle", "bird"}
+BACKGROUND_CLASSES = {"vessel", "human", "water", "other", "hum"}
 # Older tag used before moderators standardized on "hum".
 HUM_TAG_ALIASES = {"60hz"}
 # Phrases that negate "humpback" or "vessel" labels (e.g. human-written "No humpback nor vessel").
@@ -91,15 +97,22 @@ def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
         # regardless of which appears first in the comma/semicolon-separated
         # list (e.g. "vessel;resident" or "hum;transient;orca;whale" should
         # resolve to the whale species, not the noise tag, since a genuine
-        # call was present).
+        # call was present).  Within noise tags, sporadic-event noise
+        # (jingle, bird) is preferred over constant background noise
+        # (vessel, human, water, other, hum), matching the positive/negative/
+        # background priority used for live model predictions.
         for normalized_tag in normalized_tags:
             if normalized_tag in WHALE_CLASSES:
                 return normalized_tag
 
         for normalized_tag in normalized_tags:
+            if normalized_tag in NEGATIVE_CLASSES:
+                return normalized_tag
+
+        for normalized_tag in normalized_tags:
             if normalized_tag in HUM_TAG_ALIASES:
                 return "hum"
-            if normalized_tag in OTHER_CLASSES:
+            if normalized_tag in BACKGROUND_CLASSES:
                 return normalized_tag
         return "water"
 
@@ -123,16 +136,18 @@ def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
         return "transient"
     if "humpback" in text and not no_humpback:
         return "humpback"
+    # Sporadic-event noise (negative tier) is checked before constant
+    # background noise, matching the tags-path priority above.
     if any(term in text for term in BIRD_TERMS):
         return "bird"
+    if "jingl" in text:
+        return "jingle"
     if any(term in text for term in HUMAN_TERMS):
         return "human"
     if any(term in text for term in HUM_TERMS) or HUM_WORD_PATTERN.search(text):
         return "hum"
     if any(term in text for term in VESSEL_TERMS) and not no_vessel:
         return "vessel"
-    if "jingl" in text:
-        return "jingle"
     if any(term in text for term in OTHER_TERMS):
         return "other"
     if "water" in text:

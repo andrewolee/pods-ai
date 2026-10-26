@@ -89,9 +89,20 @@ class TestGetCorrectedClass:
         """If tags contain no known classes, return 'water'."""
         assert get_corrected_class("Boat noise", "unknown;maybe") == "water"
 
-    def test_tags_first_match_returned(self):
-        """First matching tag should be returned when no whale-species tag is present."""
-        assert get_corrected_class("", "vessel;jingle") == "vessel"
+    def test_tags_first_match_returned_within_same_tier(self):
+        """First matching tag should be returned when competing tags are in the same priority tier."""
+        assert get_corrected_class("", "vessel;water") == "vessel"
+
+    def test_tags_negative_tier_takes_priority_over_background_tier(self):
+        """A sporadic-event tag (jingle, bird) wins over a constant background tag (vessel, etc.),
+        regardless of position, matching the positive/negative/background priority used for live
+        model predictions in podsai_inference.py."""
+        assert get_corrected_class("", "vessel;jingle") == "jingle"
+        assert get_corrected_class("", "water;bird") == "bird"
+
+    def test_tags_background_hum_loses_to_negative_tier(self):
+        """'hum' is background tier, so it loses to a sporadic-event tag like jingle or bird."""
+        assert get_corrected_class("", "hum;jingle") == "jingle"
 
     def test_tags_whale_species_takes_priority_regardless_of_position(self):
         """A whale-species tag wins over a noise tag even when the noise tag is listed first."""
