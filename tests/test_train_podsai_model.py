@@ -235,6 +235,36 @@ def test_preprocess_function_normalizes_audio_length_before_extractor(monkeypatc
     assert result["labels"] == [0, 1]
 
 
+def test_can_stratify_split_rejects_test_size_smaller_than_class_count(monkeypatch):
+    """A 9-class dataset whose 20% test split is smaller than 9 must not attempt stratification.
+
+    Regression test for the exact scenario flagged in PR #566 review: an 8-class
+    dataset with 37 samples plus 2 new "hum" samples (39 total, 9 classes) has an
+    estimated test split of round(0.2 * 39) == 8, which is smaller than the
+    9-class count and would make train_test_split's stratify_by_column raise.
+    """
+    module = _import_stubbed_train_module(monkeypatch)
+    assert module.can_stratify_split(num_unique_labels=9, min_samples_per_label=2, estimated_test_size=8) is False
+
+
+def test_can_stratify_split_allows_test_size_equal_to_class_count(monkeypatch):
+    """A test split exactly as large as the number of classes should allow stratification."""
+    module = _import_stubbed_train_module(monkeypatch)
+    assert module.can_stratify_split(num_unique_labels=9, min_samples_per_label=2, estimated_test_size=9) is True
+
+
+def test_can_stratify_split_rejects_single_label(monkeypatch):
+    """Stratification is impossible with only one unique label, regardless of sample counts."""
+    module = _import_stubbed_train_module(monkeypatch)
+    assert module.can_stratify_split(num_unique_labels=1, min_samples_per_label=100, estimated_test_size=100) is False
+
+
+def test_can_stratify_split_rejects_label_with_fewer_than_two_samples(monkeypatch):
+    """Stratification is impossible if any label has fewer than 2 samples."""
+    module = _import_stubbed_train_module(monkeypatch)
+    assert module.can_stratify_split(num_unique_labels=5, min_samples_per_label=1, estimated_test_size=50) is False
+
+
 def test_preprocessing_workers_are_capped_by_smallest_split(monkeypatch, tmp_path):
     """Dataset preprocessing should not request more workers than the smallest split size."""
     module = _import_stubbed_train_module(monkeypatch)

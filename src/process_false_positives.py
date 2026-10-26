@@ -55,19 +55,12 @@ TRANSIENT_TERMS = ("bigg", "transient")
 HUMAN_TERMS = ("human", "radio")
 VESSEL_TERMS = ("vessel", "ship", "boat", "train")
 OTHER_TERMS = ("seal","sea lion")
-# Checked only after RESIDENT_TERMS/TRANSIENT_TERMS/"humpback"/HUMAN_TERMS, so a
-# comment mentioning "humpback" or "human" is matched by those terms first when
-# unnegated.  "hum" itself is matched with a word-boundary regex (see
-# HUM_WORD_PATTERN below) since "humpback" and "human" both literally start
-# with "hum" as a substring, which would otherwise match even when negated
-# (e.g. "No humpback nor vessel" still contains the substring "hum").
+# "hum" uses a word-boundary regex, not a plain substring check, since
+# "humpback"/"human" both start with "hum" (see HUM_WORD_PATTERN below).
 HUM_TERMS = ("electrical", "60hz")
 HUM_WORD_PATTERN = re.compile(r"\bhum\b")
-# Mirrors the positive/negative/background priority podsai_inference.py uses
-# for live model predictions (see PodsAIInference's ordered_ids construction):
-# a real whale-species tag always wins, then sporadic-event noise, then
-# constant background noise.  "hum" is background since it's typically
-# constant rather than sporadic.
+# Priority mirrors podsai_inference.py's live prediction ordering: whale
+# species > sporadic noise (negative) > constant background noise.
 WHALE_CLASSES = {"resident", "transient", "humpback"}
 NEGATIVE_CLASSES = {"jingle", "bird"}
 BACKGROUND_CLASSES = {"vessel", "human", "water", "other", "hum"}
@@ -94,14 +87,7 @@ def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
     if tags:
         normalized_tags = [tag.strip().lower() for tag in tags.split(";")]
 
-        # A real whale-species tag always takes priority over a noise tag,
-        # regardless of which appears first in the comma/semicolon-separated
-        # list (e.g. "vessel;resident" or "hum;transient;orca;whale" should
-        # resolve to the whale species, not the noise tag, since a genuine
-        # call was present).  Within noise tags, sporadic-event noise
-        # (jingle, bird) is preferred over constant background noise
-        # (vessel, human, water, other, hum), matching the positive/negative/
-        # background priority used for live model predictions.
+        # Priority order regardless of tag position: see constants above.
         for normalized_tag in normalized_tags:
             if normalized_tag in WHALE_CLASSES:
                 return normalized_tag
@@ -137,8 +123,6 @@ def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
         return "transient"
     if "humpback" in text and not no_humpback:
         return "humpback"
-    # Sporadic-event noise (negative tier) is checked before constant
-    # background noise, matching the tags-path priority above.
     if any(term in text for term in BIRD_TERMS):
         return "bird"
     if "jingl" in text:

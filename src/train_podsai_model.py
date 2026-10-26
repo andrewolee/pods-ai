@@ -121,6 +121,7 @@ F1_METRIC = _load_metric("f1")
 WHALE_CLASS_NAMES = {"humpback", "resident", "transient"}
 CHECKPOINT_SAVE_LIMIT = 6
 DEFAULT_MAX_PREPROCESSING_WORKERS = 8
+TRAIN_TEST_SPLIT_TEST_SIZE = 0.2
 
 
 class FeatureExtractorProtocol(Protocol):
@@ -168,13 +169,39 @@ def setup_label_mappings(num_classes: int) -> None:
         raise ValueError(f"num_classes must be 2, 8, or 9, got {num_classes}")
 
 
+def can_stratify_split(num_unique_labels: int, min_samples_per_label: int, estimated_test_size: int) -> bool:
+    """
+    Decide whether a stratified train/test split is feasible.
+
+    Args:
+        num_unique_labels: Number of distinct labels present in the dataset.
+        min_samples_per_label: Smallest per-label sample count across all labels.
+        estimated_test_size: Expected number of samples in the test split.
+
+    Returns:
+        True if stratification is possible, i.e. there are at least 2 unique
+        labels, each label has at least 2 samples, and the test split itself
+        is large enough to hold at least one sample per label.  A freshly-added
+        category (e.g. "hum") may start with very few samples, and with many
+        classes a small test split can end up smaller than the number of
+        classes, which ``train_test_split``'s ``stratify_by_column`` rejects
+        with a ``ValueError``.
+    """
+    return (
+        num_unique_labels > 1
+        and min_samples_per_label >= 2
+        and estimated_test_size >= num_unique_labels
+    )
+
+
 def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
     """
     Load audio files from the output/wav directory structure.
 
     Args:
         data_dir: Path to output/wav directory
-        num_classes: 2 for binary, 8 for multi-class
+        num_classes: 2 for binary, 8 for legacy multi-class (no "hum"),
+            9 for multi-class including "hum"
 
     Returns:
         DatasetDict with train and test splits
@@ -185,9 +212,7 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
     audio_files = []
     labels = []
 
-    # Iterate through each category directory.  "hum" is included regardless of
-    # num_classes so legacy 8-class runs still surface a warning (instead of
-    # crashing) if hum samples are present but not part of that label set.
+    # "hum" is scanned even under legacy 8-class mode so it warns instead of crashing.
     for category in ["water", "resident", "transient", "humpback", "vessel", "jingle", "human", "bird", "hum"]:
         category_dir = data_dir / category
         if not category_dir.exists():
@@ -242,23 +267,34 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
     if len(audio_files) < 2:
         raise ValueError(f"Dataset too small for train/test split: only {len(audio_files)} sample(s) found. Need at least 2 samples.")
 
-    # Check if stratification is possible:
-    # - Need at least 2 unique labels.
-    # - Each label must have at least 2 samples.
     num_unique_labels = len(label_counts)
-    can_stratify = num_unique_labels > 1 and min_samples_per_label >= 2
+    estimated_test_size = round(TRAIN_TEST_SPLIT_TEST_SIZE * len(audio_files))
+    can_stratify = can_stratify_split(
+        num_unique_labels, min_samples_per_label, estimated_test_size
+    )
 
     if can_stratify:
-        # Stratified split (maintains class distribution).
-        print("Using stratified train/test split (80/20)")
-        dataset = dataset.train_test_split(test_size=0.2, seed=42, stratify_by_column="label")
+        # Fall back if the split still raises (e.g. a rounding edge case).
+        try:
+            print("Using stratified train/test split (80/20)")
+            dataset = dataset.train_test_split(
+                test_size=TRAIN_TEST_SPLIT_TEST_SIZE, seed=42, stratify_by_column="label"
+            )
+        except ValueError as exc:
+            print(f"Warning: stratified split failed ({exc}). Using non-stratified split.")
+            dataset = dataset.train_test_split(test_size=TRAIN_TEST_SPLIT_TEST_SIZE, seed=42)
     else:
         # Cannot use stratification - use random split.
         if num_unique_labels == 1:
             print("Warning: Dataset has only 1 unique label. Using non-stratified split.")
         elif min_samples_per_label < 2:
             print(f"Warning: Some labels have fewer than 2 samples (min={min_samples_per_label}). Using non-stratified split.")
-        dataset = dataset.train_test_split(test_size=0.2, seed=42)
+        else:
+            print(
+                f"Warning: Test split (~{estimated_test_size} samples) is smaller than the "
+                f"number of classes ({num_unique_labels}). Using non-stratified split."
+            )
+        dataset = dataset.train_test_split(test_size=TRAIN_TEST_SPLIT_TEST_SIZE, seed=42)
 
     return dataset
 
