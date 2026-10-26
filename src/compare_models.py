@@ -40,7 +40,7 @@ from run_inference import run_inference
 RESIDENT_LABEL = "resident"
 WHALE_CLASS_NAMES = {"humpback", "resident", "transient"}
 BACKGROUND_LABELS = {
-    "abiotic", "bird", "human", "jingle", "other", "vessel", "water"
+    "abiotic", "bird", "hum", "human", "jingle", "other", "vessel", "water"
 }
 SUMMARY_LABELS = [
     ("resident", "R"),

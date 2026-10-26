@@ -17,6 +17,7 @@ For each rejected OrcaHello detection in the selected timeframe, this script:
 import argparse
 import csv
 import io
+import re
 import sys
 from contextlib import redirect_stdout
 from datetime import datetime, timedelta
@@ -53,8 +54,18 @@ TRANSIENT_TERMS = ("bigg", "transient")
 HUMAN_TERMS = ("human", "radio")
 VESSEL_TERMS = ("vessel", "ship", "boat", "train")
 OTHER_TERMS = ("seal","sea lion")
+# Checked only after RESIDENT_TERMS/TRANSIENT_TERMS/"humpback"/HUMAN_TERMS, so a
+# comment mentioning "humpback" or "human" is matched by those terms first when
+# unnegated.  "hum" itself is matched with a word-boundary regex (see
+# HUM_WORD_PATTERN below) since "humpback" and "human" both literally start
+# with "hum" as a substring, which would otherwise match even when negated
+# (e.g. "No humpback nor vessel" still contains the substring "hum").
+HUM_TERMS = ("electrical", "60hz")
+HUM_WORD_PATTERN = re.compile(r"\bhum\b")
 WHALE_CLASSES = {"resident", "transient", "humpback"}
-OTHER_CLASSES = {"bird", "human", "vessel", "jingle", "water", "other"}
+OTHER_CLASSES = {"bird", "human", "vessel", "jingle", "water", "other", "hum"}
+# Older tag used before moderators standardized on "hum".
+HUM_TAG_ALIASES = {"60hz"}
 # Phrases that negate "humpback" or "vessel" labels (e.g. human-written "No humpback nor vessel").
 NO_HUMPBACK_TERMS = ("no humpback", "not humpback")
 NO_VESSEL_TERMS = ("no vessel", "nor vessel", "no boat", "nor boat", "no ship", "nor ship", "no train", "nor train")
@@ -74,10 +85,21 @@ def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
       ``"water"``.
     """
     if tags:
-        # Use the first tag matching a class as the corrected class if available.
-        for tag in tags.split(";"):
-            normalized_tag = tag.strip().lower()
-            if normalized_tag in WHALE_CLASSES or normalized_tag in OTHER_CLASSES:
+        normalized_tags = [tag.strip().lower() for tag in tags.split(";")]
+
+        # A real whale-species tag always takes priority over a noise tag,
+        # regardless of which appears first in the comma/semicolon-separated
+        # list (e.g. "vessel;resident" or "hum;transient;orca;whale" should
+        # resolve to the whale species, not the noise tag, since a genuine
+        # call was present).
+        for normalized_tag in normalized_tags:
+            if normalized_tag in WHALE_CLASSES:
+                return normalized_tag
+
+        for normalized_tag in normalized_tags:
+            if normalized_tag in HUM_TAG_ALIASES:
+                return "hum"
+            if normalized_tag in OTHER_CLASSES:
                 return normalized_tag
         return "water"
 
@@ -105,6 +127,8 @@ def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
         return "bird"
     if any(term in text for term in HUMAN_TERMS):
         return "human"
+    if any(term in text for term in HUM_TERMS) or HUM_WORD_PATTERN.search(text):
+        return "hum"
     if any(term in text for term in VESSEL_TERMS) and not no_vessel:
         return "vessel"
     if "jingl" in text:

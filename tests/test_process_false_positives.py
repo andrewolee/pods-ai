@@ -90,8 +90,48 @@ class TestGetCorrectedClass:
         assert get_corrected_class("Boat noise", "unknown;maybe") == "water"
 
     def test_tags_first_match_returned(self):
-        """First matching tag should be returned when multiple known tags present."""
-        assert get_corrected_class("", "resident;vessel") == "resident"
+        """First matching tag should be returned when no whale-species tag is present."""
+        assert get_corrected_class("", "vessel;jingle") == "vessel"
+
+    def test_tags_whale_species_takes_priority_regardless_of_position(self):
+        """A whale-species tag wins over a noise tag even when the noise tag is listed first."""
+        assert get_corrected_class("", "vessel;resident") == "resident"
+
+    def test_tags_whale_species_takes_priority_over_hum(self):
+        """A whale-species tag wins over 'hum' even when hum appears first, since a real call was present."""
+        assert get_corrected_class("", "hum;transient;orca;whale") == "transient"
+
+    def test_tags_hum_returns_hum(self):
+        """A bare 'hum' tag resolves to the 'hum' category."""
+        assert get_corrected_class("", "hum") == "hum"
+
+    def test_tags_60hz_alias_returns_hum(self):
+        """The older '60Hz' tag is treated as an alias for 'hum'."""
+        assert get_corrected_class("", "60Hz") == "hum"
+
+    def test_tags_hum_and_60hz_together_returns_hum_once(self):
+        """A detection tagged with both 'hum' and '60Hz' still resolves to 'hum'."""
+        assert get_corrected_class("", "ship;60Hz;hum") == "hum"
+
+    def test_comments_hum_word_returns_hum(self):
+        """A standalone 'hum' mention in comments resolves to 'hum'."""
+        assert get_corrected_class("Loud hum in background.", None) == "hum"
+
+    def test_comments_electrical_keyword_returns_hum(self):
+        """'Electrical' noise mentioned in comments resolves to 'hum'."""
+        assert get_corrected_class("Electrical noise, nothing else.", None) == "hum"
+
+    def test_comments_hum_does_not_match_inside_humpback(self):
+        """'hum' must not match as a substring of 'humpback' in free-text comments."""
+        assert get_corrected_class("Humpback calls amid electrical hum.", None) == "humpback"
+
+    def test_comments_hum_does_not_match_inside_human(self):
+        """'hum' must not match as a substring of 'human' in free-text comments."""
+        assert get_corrected_class("Human voices, electrical noise.", None) == "human"
+
+    def test_comments_electrical_alongside_negated_humpback_returns_hum(self):
+        """An explicit 'electrical' mention still resolves to 'hum' even alongside an unrelated, negated 'No humpback'."""
+        assert get_corrected_class("Electrical noise. No humpback nor vessel.", None) == "hum"
 
 
 class TestAppendManualSamples:

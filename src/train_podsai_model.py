@@ -14,7 +14,10 @@ Usage:
     python train_podsai_model.py --num_classes 2 --output_dir ./model/binary
 
     # Multi-class classification (water, resident, transient, humpback, vessel, jingle, human, bird)
-    python train_podsai_model.py --num_classes 8 --output_dir ./model/multiclass
+    python train_podsai_model.py --num_classes 9 --output_dir ./model/multiclass
+
+    # Legacy 8-class multiclass (no "hum" category), for comparison against older models
+    python train_podsai_model.py --num_classes 8 --output_dir ./model/multiclass-legacy
 """
 
 import argparse
@@ -141,7 +144,8 @@ def setup_label_mappings(num_classes: int) -> None:
     Set up label mappings based on number of classes.
 
     Args:
-        num_classes: 2 for binary (other vs call), 8 for multi-class
+        num_classes: 2 for binary (other vs call), 8 for legacy multi-class
+            (no "hum"), 9 for multi-class including "hum"
     """
     global LABEL2ID, ID2LABEL
 
@@ -151,12 +155,17 @@ def setup_label_mappings(num_classes: int) -> None:
         ID2LABEL = {0: "other", 1: "whale"}
         print("Using BINARY classification: other vs whale")
     elif num_classes == 8:
-        # Multi-class: water, resident, transient, humpback, vessel, jingle, human, bird.
+        # Legacy multi-class (no "hum"): water, resident, transient, humpback, vessel, jingle, human, bird.
         LABEL2ID = {"water": 0, "resident": 1, "transient": 2, "humpback": 3, "vessel": 4, "jingle": 5, "human": 6, "bird": 7}
         ID2LABEL = {0: "water", 1: "resident", 2: "transient", 3: "humpback", 4: "vessel", 5: "jingle", 6: "human", 7: "bird"}
-        print("Using MULTI-CLASS classification: water, resident, transient, humpback, vessel, jingle, human, bird")
+        print("Using LEGACY MULTI-CLASS classification: water, resident, transient, humpback, vessel, jingle, human, bird")
+    elif num_classes == 9:
+        # Multi-class: water, resident, transient, humpback, vessel, jingle, human, bird, hum.
+        LABEL2ID = {"water": 0, "resident": 1, "transient": 2, "humpback": 3, "vessel": 4, "jingle": 5, "human": 6, "bird": 7, "hum": 8}
+        ID2LABEL = {0: "water", 1: "resident", 2: "transient", 3: "humpback", 4: "vessel", 5: "jingle", 6: "human", 7: "bird", 8: "hum"}
+        print("Using MULTI-CLASS classification: water, resident, transient, humpback, vessel, jingle, human, bird, hum")
     else:
-        raise ValueError(f"num_classes must be 2 or 8, got {num_classes}")
+        raise ValueError(f"num_classes must be 2, 8, or 9, got {num_classes}")
 
 
 def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
@@ -176,8 +185,10 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
     audio_files = []
     labels = []
 
-    # Iterate through each category directory.
-    for category in ["water", "resident", "transient", "humpback", "vessel", "jingle", "human", "bird"]:
+    # Iterate through each category directory.  "hum" is included regardless of
+    # num_classes so legacy 8-class runs still surface a warning (instead of
+    # crashing) if hum samples are present but not part of that label set.
+    for category in ["water", "resident", "transient", "humpback", "vessel", "jingle", "human", "bird", "hum"]:
         category_dir = data_dir / category
         if not category_dir.exists():
             print(f"Warning: {category_dir} does not exist")
@@ -188,16 +199,19 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
         print(f"Found {len(wav_files)} files for {category}")
 
         for wav_file in wav_files:
-            audio_files.append(str(wav_file))
-
             # Map labels based on num_classes.
             if num_classes == 2:
                 # Binary: map resident/transient/humpback to "whale" (1), everything else to "other" (0).
-                label = LABEL2ID["other"] if category == "water" or category == "vessel" or category == "jingle" or category == "human" or category == "bird" else LABEL2ID["whale"]
-            else:
+                label = LABEL2ID["whale"] if category in WHALE_CLASS_NAMES else LABEL2ID["other"]
+            elif category in LABEL2ID:
                 # Multi-class: use original category.
                 label = LABEL2ID[category]
+            else:
+                # E.g. "hum" samples present while running with --num_classes 8 (legacy, no "hum" label).
+                print(f"Warning: skipping {wav_file} — category {category!r} is not part of the current {num_classes}-class label set")
+                continue
 
+            audio_files.append(str(wav_file))
             labels.append(label)
 
     # Validate that dataset is not empty.
@@ -448,9 +462,10 @@ def main() -> None:
     parser.add_argument(
         "--num_classes",
         type=int,
-        choices=[2, 8],
-        default=8,
-        help="Number of classes: 2 for binary (other vs whale), 8 for multi-class (default: 8)",
+        choices=[2, 8, 9],
+        default=9,
+        help="Number of classes: 2 for binary (other vs whale), 9 for multi-class including \"hum\", "
+             "8 for legacy multi-class without \"hum\" (default: 9)",
     )
     parser.add_argument(
         "--data_dir",
