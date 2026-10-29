@@ -143,3 +143,8 @@ water,rpi_bush_point,2025_06_29_18_55_57_PST,https://live.orcasound.net/bouts/ne
 water,rpi_bush_point,2025_06_29_19_03_57_PST,https://live.orcasound.net/bouts/new/bush-point?time=2025-06-30T02%3A03%3A57.000Z,Water slosh,fp_machine_only,75.4338,
 water,rpi_bush_point,2025_06_30_04_17_38_PST,https://live.orcasound.net/bouts/new/bush-point?time=2025-06-30T11%3A17%3A38.000Z,Water slosh,fp_machine_only,64.9294,
 water,rpi_orcasound_lab,2022_01_20_21_34_49_PST,https://live.orcasound.net/bouts/new/orcasound-lab?time=2022-01-21T05%3A34%3A49.000Z,Water noise,fp_machine_only,100,
+hum,rpi_sunset_bay,2026_08_21_11_21_52_PST,https://live.orcasound.net/bouts/new/sunset-bay?time=2026-08-21T18%3A21%3A52.000Z,drill? ferry horn,fp_machine,100,hum;vessel
+hum,rpi_sunset_bay,2026_08_20_12_19_52_PST,https://live.orcasound.net/bouts/new/sunset-bay?time=2026-08-20T19%3A19%3A52.000Z,,fp_machine,100,hum
+hum,rpi_sunset_bay,2026_02_21_14_12_38_PST,https://live.orcasound.net/bouts/new/sunset-bay?time=2026-02-21T22%3A12%3A38.000Z,Electrical noise,fp_machine,100,
+hum,rpi_andrews_bay,2026_02_16_11_50_17_PST,https://live.orcasound.net/bouts/new/andrews-bay?time=2026-02-16T19%3A50%3A17.000Z,Electrical noise,fp_machine,100,
+hum,rpi_andrews_bay,2026_02_16_11_48_17_PST,https://live.orcasound.net/bouts/new/andrews-bay?time=2026-02-16T19%3A48%3A17.000Z,Electrical noise,fp_machine,100,
