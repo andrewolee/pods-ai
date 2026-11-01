@@ -485,3 +485,5 @@ water,rpi_sunset_bay,2026_02_16_22_42_13_PST,https://live.orcasound.net/bouts/ne
 water,rpi_sunset_bay,2026_02_16_22_43_23_PST,https://live.orcasound.net/bouts/new/sunset-bay?time=2026-02-17T06%3A43%3A23.000Z,Water slosh,fp_machine_only,62.1,
 water,rpi_sunset_bay,2026_02_16_22_50_49_PST,https://live.orcasound.net/bouts/new/sunset-bay?time=2026-02-17T06%3A50%3A49.000Z,Water slosh,fp_machine_only,68.1,
 water,rpi_sunset_bay,2026_02_22_06_53_48_PST,https://live.orcasound.net/bouts/new/sunset-bay?time=2026-02-22T14%3A53%3A48.000Z,"Pings, water slosh, cable scrape",fp_machine_only,72.5,
+hum,rpi_sunset_bay,2026_02_21_14_13_02_PST,https://live.orcasound.net/bouts/new/sunset-bay?time=2026-02-21T22%3A13%3A02.000Z,Electrical noise,fp_machine,88.4,
+hum,rpi_sunset_bay,2026_02_21_14_12_56_PST,https://live.orcasound.net/bouts/new/sunset-bay?time=2026-02-21T22%3A12%3A56.000Z,Electrical noise,fp_machine,87.7,
