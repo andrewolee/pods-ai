@@ -151,7 +151,6 @@ def setup_label_mappings(num_classes: int) -> None:
         ID2LABEL = {0: "other", 1: "whale"}
         print("Using BINARY classification: other vs whale")
     elif num_classes == 9:
-        # Multi-class: water, resident, transient, humpback, vessel, jingle, human, bird, hum.
         LABEL2ID = {"water": 0, "resident": 1, "transient": 2, "humpback": 3, "vessel": 4, "jingle": 5, "human": 6, "bird": 7, "hum": 8}
         ID2LABEL = {0: "water", 1: "resident", 2: "transient", 3: "humpback", 4: "vessel", 5: "jingle", 6: "human", 7: "bird", 8: "hum"}
         print("Using MULTI-CLASS classification: water, resident, transient, humpback, vessel, jingle, human, bird, hum")

@@ -236,13 +236,7 @@ def test_preprocess_function_normalizes_audio_length_before_extractor(monkeypatc
 
 
 def test_can_stratify_split_rejects_test_size_smaller_than_class_count(monkeypatch):
-    """A 9-class dataset whose 20% test split is smaller than 9 must not attempt stratification.
-
-    Regression test for the exact scenario flagged in PR #566 review: an 8-class
-    dataset with 37 samples plus 2 new "hum" samples (39 total, 9 classes) has an
-    estimated test split of round(0.2 * 39) == 8, which is smaller than the
-    9-class count and would make train_test_split's stratify_by_column raise.
-    """
+    """A 9-class dataset whose 20% test split is smaller than 9 must not attempt stratification."""
     module = _import_stubbed_train_module(monkeypatch)
     assert module.can_stratify_split(num_unique_labels=9, min_samples_per_label=2, estimated_test_size=8) is False
 
