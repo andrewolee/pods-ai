@@ -1,3 +1,4 @@
+<!-- README.md is generated from README.md.template; do not edit it directly. -->
 # Programmatic Orca Detection System using Artificial Intelligence (PODS-AI)
 
 This repository contains scripts for training, evaluating, and using the
@@ -171,7 +172,8 @@ To have GitHub train a new model from the latest `main` branch:
    The Docker image reads this same revision from that file.
 8. Push the changes to a separate branch in the main repository.
 9. Generate a model comparison as follows. Go to https://github.com/orcasound/pods-ai/actions/workflows/generate_model_comparison.yml in a browser, click the "Run workflow" dropdown, select the branch to use in "Use workflow from" and click "Run workflow". Results are committed to the selected branch, except that selecting `main` commits them to `update-model-comparison`. This may take several hours to run. You could instead run it locally using `python src/compare_models.py --models podsai` to verify that the F1 does not regress from the latest model as shown at the top of this README. Don't proceed further unless the F1 improves.
-10. Update README.md with the latest model comparison results.
+10. Update `README.md.template` with any documentation changes, then run
+    `python src/build-readme.py` to regenerate `README.md`.
 11. Generate a pull request with the changes
 12. Once the pull request is merged, add another tag to the main branch such as
    `LiveInferenceSystem.v1.4.0` (bumping the version from the most recent such tag).
@@ -243,6 +245,9 @@ flowchart TD;
     signalsHumpback@{ shape: doc, label: "signals-humpback" };
     wav@{ shape: docs, label: "wav/*" };
     testingWav@{ shape: docs, label: "testing-wav/*" };
+    modelComparison@{ shape: doc, label: "model-comparison.txt" };
+    readmeTemplate@{ shape: doc, label: "README.md.template" };
+    readme@{ shape: doc, label: "README.md" };
     concatenated@{ shape: docs, label: "concatenated.wav" };
     png@{ shape: docs, label: "png/*" };
     embeddings@{ shape: docs, label: "embeddings.csv" };
@@ -251,6 +256,7 @@ flowchart TD;
     processHumpbackWavs@{ shape: rect, label: "process_humpback_wavs.py" };
     trainPodsaiModel@{ shape: rect, label: "train_podsai_model.py" };
     compareModels@{ shape: rect, label: "compare_models.py" };
+    buildReadme@{ shape: rect, label: "build-readme.py" };
     concatenateWavs@{ shape: rect, label: "concatenate_wavs.py" };
     makeSpectrograms@{ shape: rect, label: "make_spectrograms.py" };
     generateEmbeddings@{ shape: rect, label: "generate_embeddings.py" };
@@ -266,6 +272,9 @@ flowchart TD;
     testingSamples-->compareModels;
     testingWav-->compareModels;
     orcaHelloModel-->compareModels;
+    compareModels-->modelComparison;
+    modelComparison-->buildReadme;
+    readmeTemplate-->buildReadme-->readme;
 
     wav-->concatenateWavs-->concatenated;
     wav-->makeSpectrograms-->png;

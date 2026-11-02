@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2  # v2.22.2
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -98,7 +98,10 @@ jobs:
             --testing-csv-path output/csv/testing_60s_samples.csv
 
       - name: Generate model comparison results
-        run: set -o pipefail; python src/compare_models.py --models orcahello,oldpodsai,podsai | tee model-comparison.txt
+        run: |
+          set -o pipefail
+          python src/compare_models.py --models orcahello,oldpodsai,podsai | tee model-comparison.txt
+          python src/build-readme.py
 
       - name: Commit and push model comparison updates
         env:
@@ -109,13 +112,13 @@ jobs:
             exit 0
           fi
 
-          if [ -z "$(git status --porcelain model-comparison.txt)" ]; then
-            echo "model-comparison.txt is unchanged."
+          if [ -z "$(git status --porcelain model-comparison.txt README.md)" ]; then
+            echo "Model comparison and README are unchanged."
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add model-comparison.txt
-          git commit -m "Update model-comparison.txt"
+          git add model-comparison.txt README.md
+          git commit -m "Update model comparison and README"
           git push origin "HEAD:${PUSH_BRANCH}"

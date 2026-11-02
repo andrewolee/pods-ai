@@ -9,7 +9,8 @@ Tools — all usable without AKS access:
 4. get_sample_stats — category distribution in local training / testing CSVs.
 5. find_unlabeled_detections — Orcasite detections not yet present in local CSVs.
 6. compare_models_on_clip — run OrcaHello (HuggingFace) + PODS-AI on a local WAV.
-7. export_unlabeled_to_csv — extract unlabeled remote data and save directly to disk.
+7. generate_spectrogram — generate a PNG spectrogram for a local WAV clip.
+8. export_unlabeled_to_csv — extract unlabeled remote data and save directly to disk.
 """
 
 import csv
@@ -346,7 +347,7 @@ def compare_models_on_clip(
     Args:
         wav_path: Absolute path to a local .wav file.
         podsai_model_path: Path or HuggingFace Hub ID of the PODS-AI model to compare.
-                           Defaults to 'davethaler/whale-call-detector' if not provided.
+        Defaults to 'davethaler/whale-call-detector' if not provided.
 
     Returns:
         Comparison payload. Each model's details includes the optional
@@ -416,6 +417,80 @@ def compare_models_on_clip(
         "details": results,
     }
 
+
+# ---------------------------------------------------------------------------
+# Tool 7 — Generate a spectrogram PNG from a local WAV clip.
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def generate_spectrogram(
+    wav_path: str,
+    output_path: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Generate a spectrogram PNG for a local WAV clip.
+
+    This is useful for visual debugging when reviewing detections, comparing model
+    outputs, or inspecting unknown hydrophone recordings without leaving the agent
+    session.
+
+    Args:
+        wav_path: Absolute path to a local .wav file.
+        output_path: Optional output PNG path. If omitted, the PNG is saved next to
+            the input WAV using the same basename and a .png extension.
+
+    Returns:
+        Dictionary containing the input wav path and generated PNG path.
+    """
+    path = Path(wav_path)
+    if not path.is_absolute() or not path.exists():
+        raise FileNotFoundError(f"WAV file not found: {wav_path}")
+    if path.suffix.lower() != ".wav":
+        raise ValueError("Only .wav files are supported.")
+
+    resolved_output: Optional[Path] = None
+    if output_path:
+        output_file = Path(output_path)
+        if not output_file.is_absolute():
+            output_file = (path.parent / output_file).resolve()
+        if output_file.is_dir():
+            output_file = output_file / f"{path.stem}.png"
+        elif output_file.suffix.lower() == "":
+            output_file = output_file.with_suffix(".png")
+        elif output_file.suffix.lower() != ".png":
+            raise ValueError("output_path must be a .png file or a directory path.")
+        resolved_output = output_file
+
+    logger.info("generate_spectrogram", wav=wav_path, output_path=str(resolved_output) if resolved_output else None)
+
+    if output_path is None:
+        default_png_path = path.with_suffix(".png")
+        if default_png_path.exists():
+            raise FileExistsError(f"Spectrogram output already exists: {default_png_path}")
+    elif resolved_output and resolved_output.exists():
+        raise FileExistsError(f"Spectrogram output already exists: {resolved_output}")
+
+    try:
+        from spectrogram_visualizer import write_spectrogram
+    except Exception as exc:  # pragma: no cover - dependency guard for minimal MCP installs
+        raise RuntimeError(
+            "Spectrogram generation requires the full audio stack from requirements.txt "
+            "(librosa, matplotlib, soundfile, numpy)."
+        ) from exc
+
+    png_path = Path(write_spectrogram(path, output_path=resolved_output))
+    if png_path.exists():
+        return {
+            "wav_path": str(path),
+            "png_path": str(png_path),
+            "output_path": str(png_path),
+            "size_bytes": png_path.stat().st_size,
+        }
+
+    raise RuntimeError(f"Spectrogram generation failed for {wav_path}")
+
+# ---------------------------------------------------------------------------
+# Tool 8 — Export an unlabeled detections dataset to a CSV file.
+# ---------------------------------------------------------------------------
 @mcp.tool()
 def export_unlabeled_to_csv(
     node_name: str,

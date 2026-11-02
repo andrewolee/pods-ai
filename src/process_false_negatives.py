@@ -124,11 +124,21 @@ def process_false_negatives(
             if end_time is not None and detection.timestamp > end_time:
                 continue
 
+            # Get model_id for tracing and skip PODS-AI detection.
+            model_id = getattr(detection, "modelId", None)
+            if isinstance(model_id, str) and model_id:
+                model_id = model_id.lower()
+            else:
+                model_id = "Unknown"
+
+            if ("davethaler/whale-call-detector" == model_id):
+                continue
+
             summary["confirmed"] += 1
             timestamp_str = format_timestamp_pst(
                 detection.timestamp - timedelta(seconds=AUDIO_OFFSET_SECONDS)
             )
-            print(f"Checking confirmed detection at {timestamp_str}")
+            print(f"Checking confirmed SRKW detection at {timestamp_str} by model {model_id}")
 
             with TemporaryDirectory() as temp_dir:
                 min_end_timestamp_pst_str = format_timestamp_pst(detection.timestamp + timedelta(seconds=60))

@@ -71,42 +71,44 @@ def _render_spectrogram(
         dpi: Dots per inch.
     """
     fig, ax = plt.subplots(1, 1, figsize=(width_px / dpi, height_px / dpi), dpi=dpi)
-    ax.axis("off")
-    ax.set_position([0.0, 0.0, 1.0, 1.0])
+    try:
+        ax.axis("off")
+        ax.set_position([0.0, 0.0, 1.0, 1.0])
 
-    # Freqs are log-spaced; give each mel bin equal pixel height.
-    bin_indices = np.arange(len(freqs_np))
-    ax.pcolormesh(
-        times_np,
-        bin_indices,
-        spectrogram_np,
-        shading="auto",
-        cmap=_COLORMAP,
-    )
-
-    f_min, f_max = float(freqs_np[0]), float(freqs_np[-1])
-    ticks = _pick_freq_ticks(f_min, f_max)
-    x_pos = times_np[0] + (times_np[-1] - times_np[0]) * 0.005
-
-    for freq in ticks:
-        bin_idx = float(np.searchsorted(freqs_np, freq))
-        ax.text(
-            x_pos,
-            bin_idx,
-            _freq_label(freq),
-            color="white",
-            fontsize=_FREQ_LABEL_FONT_SIZE,
-            fontweight="bold",
-            va="center",
-            ha="left",
-            path_effects=[
-                matplotlib.patheffects.Stroke(linewidth=2, foreground="black"),
-                matplotlib.patheffects.Normal(),
-            ],
+        # Freqs are log-spaced; give each mel bin equal pixel height.
+        bin_indices = np.arange(len(freqs_np))
+        ax.pcolormesh(
+            times_np,
+            bin_indices,
+            spectrogram_np,
+            shading="auto",
+            cmap=_COLORMAP,
         )
 
-    fig.savefig(output_path, bbox_inches=None, pad_inches=0)
-    plt.close(fig)
+        f_min, f_max = float(freqs_np[0]), float(freqs_np[-1])
+        ticks = _pick_freq_ticks(f_min, f_max)
+        x_pos = times_np[0] + (times_np[-1] - times_np[0]) * 0.005
+
+        for freq in ticks:
+            bin_idx = float(np.searchsorted(freqs_np, freq))
+            ax.text(
+                x_pos,
+                bin_idx,
+                _freq_label(freq),
+                color="white",
+                fontsize=_FREQ_LABEL_FONT_SIZE,
+                fontweight="bold",
+                va="center",
+                ha="left",
+                path_effects=[
+                    matplotlib.patheffects.Stroke(linewidth=2, foreground="black"),
+                    matplotlib.patheffects.Normal(),
+                ],
+            )
+
+        fig.savefig(output_path, bbox_inches=None, pad_inches=0)
+    finally:
+        plt.close(fig)
 
 
 def _compute_mel_for_clip(wav_file_path, native_sr):

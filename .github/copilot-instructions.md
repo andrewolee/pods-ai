@@ -14,9 +14,11 @@ pods-ai/
 │   ├── renovate.json             # Renovate configuration
 │   └── workflows/
 │       ├── check_csv.yml                          # CI: regenerates and validates detections.csv
+│       ├── generate_model_comparison.yml           # Regenerates model comparison and README.md
 │       ├── LiveInferenceSystem.yaml               # CI: build and smoke-test the Docker container
 │       ├── LiveInferenceSystem-deploy.yaml        # CD: push container image to ACR on tag
 │       ├── LiveInferenceSystem-deploy-configmaps.yaml  # CD: apply K8s configmaps on change
+│       ├── validate-readme.yml                    # CI: verifies README.md is generated from its inputs
 │       └── validate-yaml.yml                      # CI: yamllint on all YAML files
 ├── external/                     # Git submodules such as OrcaHello
 ├── LiveInferenceSystem/          # Docker container for live inference (mirrors OrcaHello's InferenceSystem/)
@@ -34,6 +36,7 @@ pods-ai/
 ├── tests/                        # Pytest test suite
 ├── LICENSE
 ├── README.md                     # User and contributor documentation
+├── README.md.template            # README source with a model comparison placeholder
 ├── patch_fastai_audio.bat        # Windows helper for fastai_audio compatibility
 ├── patch_fastai_audio.sh         # Shell helper for fastai_audio compatibility
 ├── pods-ai.pyproj                # Visual Studio Python project metadata
@@ -42,6 +45,7 @@ pods-ai/
 └── src/
     ├── add_samples.py              # Segment and label new samples
     ├── audio_utils.py              # Shared audio helpers
+    ├── build-readme.py             # Generate README.md from its template and model comparison
     ├── compare_models.py           # Compare model performance on testing data
     ├── download_wavs.py            # Step 4: download wav files
     ├── extract_training_samples.py # Step 3: detections.csv → initial training/testing samples
@@ -104,6 +108,8 @@ Classification kinds: `tp_human_only`, `tp_machine_only`, `fp_machine_only`, `tp
 - **LiveInferenceSystem.yaml** – Runs on every PR touching `LiveInferenceSystem/**` or the orchestrator source files; builds the Docker image from the repo root and runs a LiveHLS smoke test.
 - **LiveInferenceSystem-deploy.yaml** – Triggered by a `LiveInferenceSystem.v#.#.#` tag push; builds and pushes the container image to `orcaconservancycr.azurecr.io/pods-ai-live-inference-system`.
 - **LiveInferenceSystem-deploy-configmaps.yaml** – Triggered when `LiveInferenceSystem/deploy/*-configmap.yaml` files change on `main`; applies updated configmaps and restarts the affected deployments via `kubectl`.
+- **generate_model_comparison.yml** – Runs model comparison and regenerates `README.md` from `README.md.template` and `model-comparison.txt`.
+- **validate-readme.yml** – Runs on PRs changing `README.md.template` or `model-comparison.txt` and verifies that `README.md` matches `python src/build-readme.py`.
 - **validate-yaml.yml** – Runs `yamllint` against all YAML files using the rules in `.yamllint.yml` (line-length disabled, truthy check-keys disabled).
 - **dependabot.yml** – Weekly updates for GitHub Actions dependencies.
 - **renovate.json** – Tracks additional dependency updates, including the pinned PODS-AI test model revision.

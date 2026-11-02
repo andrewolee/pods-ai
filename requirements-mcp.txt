@@ -1,8 +1,8 @@
 # MCP server base requirements.
 # Install with: pip install -r requirements-mcp.txt.
-# Note: compare_models_on_clip requires the full ML/audio dependencies from requirements.txt.
+# Note: compare_models_on_clip and generate_spectrogram require the full ML/audio dependencies from requirements.txt.
 mcp==2.3.0
 structlog==26.1.0
 requests==2.34.2
-boto3==1.43.118
+boto3==1.43.122
 pytz==2026.5

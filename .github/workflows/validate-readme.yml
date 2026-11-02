@@ -1,0 +1,30 @@
+# Copyright (c) PODS-AI contributors
+# SPDX-License-Identifier: MIT
+---
+name: Validate README
+
+on:
+  pull_request:
+    paths:
+      - README.md
+      - README.md.template
+      - model-comparison.txt
+      - src/build-readme.py
+      - .github/workflows/validate-readme.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate-readme:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Generate README
+        run: python src/build-readme.py
+
+      - name: Verify README is up to date
+        run: git diff --exit-code -- README.md

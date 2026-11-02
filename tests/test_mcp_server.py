@@ -5,6 +5,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 import json
 import io
+import tempfile
+from pathlib import Path
 
 # Try to import mcp to see if it is installed.
 try:
@@ -53,6 +55,7 @@ from mcp_server import (
     list_s3_recordings,
     get_sample_stats,
     find_unlabeled_detections,
+    generate_spectrogram,
     run_dual_handshake,
 )
 from orcasite_feeds import OrcasiteFeed
@@ -194,6 +197,117 @@ class TestMCPServer(unittest.TestCase):
         result = find_unlabeled_detections("node_1")
         self.assertEqual(result["unlabeled_count"], 1)
         self.assertEqual(result["unlabeled"][0]["id"], "det_new")
+
+    def test_generate_spectrogram_validates_paths(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wav_path = Path(tmpdir) / "clip.wav"
+            wav_path.write_bytes(b"not-really-audio")
+
+            with self.assertRaises(FileNotFoundError):
+                generate_spectrogram(str(Path(tmpdir) / "missing.wav"))
+
+            with self.assertRaises(ValueError):
+                generate_spectrogram(str(wav_path), output_path=str(Path(tmpdir) / "bad.jpg"))
+
+            with self.assertRaises(FileNotFoundError):
+                generate_spectrogram("relative/path/clip.wav")
+
+    def test_generate_spectrogram_routes_directory_and_file_outputs(self):
+        mock_module = MagicMock()
+
+        def fake_write(wav_file, output_path=None):
+            if output_path is None:
+                output_file = Path(str(wav_file)).with_suffix(".png")
+            else:
+                output_file = Path(output_path)
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            output_file.write_bytes(b"png")
+            return str(output_file)
+
+        mock_module.write_spectrogram = MagicMock(side_effect=fake_write)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wav_path = Path(tmpdir) / "clip.wav"
+            wav_path.write_bytes(b"not-really-audio")
+            spectra_dir = Path(tmpdir) / "spectra"
+            spectra_dir.mkdir()
+
+            with patch.dict(sys.modules, {"spectrogram_visualizer": mock_module}):
+                dir_result = generate_spectrogram(str(wav_path), output_path=str(spectra_dir))
+                self.assertEqual(dir_result["png_path"], str(spectra_dir / "clip.png"))
+                self.assertEqual(mock_module.write_spectrogram.call_args_list[0].args[0], wav_path)
+                self.assertTrue((spectra_dir / "clip.png").exists())
+
+                file_result = generate_spectrogram(str(wav_path), output_path=str(Path(tmpdir) / "custom_name"))
+                self.assertEqual(file_result["png_path"], str(Path(tmpdir) / "custom_name.png"))
+                self.assertEqual(mock_module.write_spectrogram.call_args_list[1].args[0], wav_path)
+                self.assertTrue((Path(tmpdir) / "custom_name.png").exists())
+
+    def test_generate_spectrogram_dependency_guard(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wav_path = Path(tmpdir) / "clip.wav"
+            wav_path.write_bytes(b"not-really-audio")
+
+            with patch.dict(sys.modules, {"spectrogram_visualizer": None}):
+                with self.assertRaisesRegex(RuntimeError, "full audio stack"):
+                    generate_spectrogram(str(wav_path))
+
+    def test_generate_spectrogram_requires_generated_file(self):
+        mock_module = MagicMock()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            missing_png = Path(tmpdir) / "does-not-exist.png"
+            mock_module.write_spectrogram = MagicMock(return_value=str(missing_png))
+            wav_path = Path(tmpdir) / "clip.wav"
+            wav_path.write_bytes(b"not-really-audio")
+
+            with patch.dict(sys.modules, {"spectrogram_visualizer": mock_module}):
+                with self.assertRaisesRegex(RuntimeError, "Spectrogram generation failed"):
+                    generate_spectrogram(str(wav_path))
+
+    def test_generate_spectrogram_rejects_existing_default_or_directory_targets(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wav_path = Path(tmpdir) / "clip.wav"
+            wav_path.write_bytes(b"not-really-audio")
+            default_png = wav_path.with_suffix(".png")
+            default_png.write_bytes(b"existing")
+
+            spectra_dir = Path(tmpdir) / "spectra"
+            spectra_dir.mkdir()
+            dir_png = spectra_dir / "clip.png"
+            dir_png.write_bytes(b"existing")
+
+            with patch.dict(sys.modules, {"spectrogram_visualizer": MagicMock()}):
+                with self.assertRaisesRegex(FileExistsError, "already exists"):
+                    generate_spectrogram(str(wav_path))
+                with self.assertRaisesRegex(FileExistsError, "already exists"):
+                    generate_spectrogram(str(wav_path), output_path=str(spectra_dir))
+
+    def test_generate_spectrogram_returns_metadata(self):
+        mock_module = MagicMock()
+
+        def fake_write(wav_file, output_path=None):
+            output = Path(output_path) if output_path is not None else Path(str(wav_file)).with_suffix(".png")
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_bytes(b"png-data")
+            return str(output)
+
+        mock_module.write_spectrogram = MagicMock(side_effect=fake_write)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wav_path = Path(tmpdir) / "clip.wav"
+            wav_path.write_bytes(b"not-really-audio")
+            png_path = Path(tmpdir) / "custom.png"
+
+            with patch.dict(sys.modules, {"spectrogram_visualizer": mock_module}):
+                result = generate_spectrogram(str(wav_path), output_path=str(png_path))
+
+            self.assertEqual(result["wav_path"], str(wav_path))
+            self.assertEqual(result["png_path"], str(png_path))
+            self.assertEqual(result["output_path"], str(png_path))
+            self.assertEqual(result["size_bytes"], png_path.stat().st_size)
+            self.assertGreater(result["size_bytes"], 0)
+            self.assertEqual(mock_module.write_spectrogram.call_args.args[0], wav_path)
 
     @patch("model_inference.get_model_inference")
     @patch("mcp_server.Path.exists")
@@ -536,6 +650,7 @@ class TestDualHandshake(unittest.TestCase):
         self.assertEqual(wrapper.readline(), "first line\n")
         self.assertEqual(wrapper.readline(), "second line\n")
         self.assertEqual(wrapper.readline(), "third line\n")
+
 
 
 if __name__ == "__main__":

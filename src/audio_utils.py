@@ -57,6 +57,7 @@ class OrcaHelloDetection:
     confidence: Optional[float] = None
     tags: str = ""
     comments: str = ""
+    modelId: Optional[str] = None
 
 
 # Terms in a detection description that indicate the label cannot be determined with confidence.
@@ -274,6 +275,9 @@ def get_machine_detections(
         else:
             status = "unreviewed"
 
+        modelId = item.get("modelId")
+        modelId = modelId.lower() if isinstance(modelId, str) else ""
+
         ts_raw = item.get("timestamp")
         try:
             ts = datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
@@ -295,7 +299,8 @@ def get_machine_detections(
                 status=status,
                 confidence=confidence,
                 tags=(item.get("tags") or "").strip(),
-                comments=(item.get("comments") or "").strip()
+                comments=(item.get("comments") or "").strip(),
+                modelId=modelId,
             )
         )
 
