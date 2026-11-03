@@ -55,12 +55,12 @@ TRANSIENT_TERMS = ("bigg", "transient")
 HUMAN_TERMS = ("human", "radio")
 VESSEL_TERMS = ("vessel", "ship", "boat", "train")
 OTHER_TERMS = ("seal","sea lion")
-# "hum" uses a word-boundary regex, not a plain substring check, since
-# "humpback"/"human" both start with "hum" (see HUM_WORD_PATTERN below).
-HUM_TERMS = ("electric", "60hz", "60 hz", "60-hz")
-HUM_WORD_PATTERN = re.compile(r"\bhum(?:s|ming|med)?\b")
+# "hum"/"electric" use word-boundary regexes, not plain substring checks,
+# since "humpback"/"human"/"electrician" would otherwise falsely match.
+HUM_TERMS = ("60hz", "60 hz", "60-hz")
+HUM_WORD_PATTERN = re.compile(r"\b(?:hum(?:s|ming|med)?|electric(?:al|ity|ally)?)\b")
 NO_HUM_PATTERN = re.compile(
-    r"\b(?:no|not|nor)(?:\s+\w+){0,2}?\s+(?:hum(?:s|ming|med)?|electric\w*|60[\s-]?hz)\b"
+    r"\b(?:no|not|nor)(?:\s+\w+){0,2}?\s+(?:hum(?:s|ming|med)?|electric(?:al|ity|ally)?|60[\s-]?hz)\b"
 )
 # Priority mirrors podsai_inference.py's live prediction ordering: whale
 # species > sporadic noise (negative) > constant background noise.

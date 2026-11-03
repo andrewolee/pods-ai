@@ -144,6 +144,10 @@ class TestGetCorrectedClass:
         """'Electric' (without the '-al' suffix) resolves to 'hum'."""
         assert get_corrected_class("Electric buzz, nothing else.", None) == "hum"
 
+    def test_comments_electrician_does_not_match_as_hum(self):
+        """'electrician' must not match as a substring of 'electric' in free-text comments."""
+        assert get_corrected_class("Local electrician repaired the dock wiring today.", None) == "water"
+
     def test_comments_60_hz_with_space_returns_hum(self):
         """'60 Hz' (with a space) resolves to 'hum'."""
         assert get_corrected_class("60 Hz interference, nothing else.", None) == "hum"
