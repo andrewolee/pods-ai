@@ -438,64 +438,7 @@ class TestPodsAIInferenceIndexing:
         self, mock_extractor_class, mock_model_class,
         mock_feature_extractor
     ):
-        """Bird/jingle labels must be ordered before vessel/water when all qualify."""
-        mock_model = Mock()
-        mock_config = Mock()
-        mock_config.id2label = {
-            0: "water", 1: "resident", 2: "transient", 3: "humpback",
-            4: "vessel", 5: "jingle", 6: "human", 7: "bird",
-        }
-        mock_config.label2id = {
-            label: class_id for class_id, label in mock_config.id2label.items()
-        }
-        mock_config._name_or_path = "test-model"
-        mock_config.architectures = ["Wav2Vec2ForSequenceClassification"]
-        mock_config.model_type = "wav2vec2"
-        mock_config._commit_hash = None
-        mock_model.config = mock_config
-        mock_model.to = Mock(return_value=mock_model)
-        mock_model.eval = Mock(return_value=mock_model)
-
-        predicted_ids = [4, 5, 4, 7, 0, 5, 0, 7, 4, 7, 0, 4, 7, 4]
-
-        def mock_forward(**kwargs):
-            batch_size = kwargs["input_values"].shape[0]
-            logits = []
-            for index in range(batch_size):
-                row = [-4.0] * 8
-                row[predicted_ids[index]] = 4.0
-                logits.append(row)
-            output = Mock()
-            output.logits = torch.tensor(logits)
-            return output
-
-        mock_model.side_effect = mock_forward
-        mock_extractor_class.from_pretrained = Mock(return_value=mock_feature_extractor)
-        mock_model_class.from_pretrained = Mock(return_value=mock_model)
-
-        from podsai_inference import PodsAIInference
-
-        model = PodsAIInference("test-model-path", min_num_positive_calls_threshold=2)
-        sr = 16000
-        audio = np.zeros(30 * sr, dtype=np.float32)
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as audio_file:
-            sf.write(audio_file.name, audio, sr)
-            audio_path = audio_file.name
-        try:
-            result = model.predict(audio_path, segment_duration=3, hop_duration=2)
-        finally:
-            Path(audio_path).unlink(missing_ok=True)
-
-        assert result["global_prediction_label"] == "bird"
-        assert result["global_prediction_labels"] == ["bird", "jingle", "vessel", "water"]
-
-    @patch('podsai_inference.AutoModelForAudioClassification')
-    @patch('podsai_inference.AutoFeatureExtractor')
-    def test_global_prediction_prioritizes_negative_labels_over_hum_background(
-        self, mock_extractor_class, mock_model_class,
-        mock_feature_extractor
-    ):
-        """Bird/jingle labels must be ordered before vessel/hum when all qualify."""
+        """Bird/jingle labels must be ordered before vessel/water/hum when all qualify."""
         mock_model = Mock()
         mock_config = Mock()
         mock_config.id2label = {
@@ -513,7 +456,7 @@ class TestPodsAIInferenceIndexing:
         mock_model.to = Mock(return_value=mock_model)
         mock_model.eval = Mock(return_value=mock_model)
 
-        predicted_ids = [4, 5, 4, 7, 8, 5, 8, 7, 4, 7, 8, 4, 7, 4]
+        predicted_ids = [4, 7, 5, 0, 8, 7, 4, 5, 0, 8, 7, 4, 7, 4]
 
         def mock_forward(**kwargs):
             batch_size = kwargs["input_values"].shape[0]
@@ -544,7 +487,7 @@ class TestPodsAIInferenceIndexing:
             Path(audio_path).unlink(missing_ok=True)
 
         assert result["global_prediction_label"] == "bird"
-        assert result["global_prediction_labels"] == ["bird", "jingle", "vessel", "hum"]
+        assert result["global_prediction_labels"] == ["bird", "jingle", "vessel", "hum", "water"]
 
     @patch('podsai_inference.AutoModelForAudioClassification')
     @patch('podsai_inference.AutoFeatureExtractor')

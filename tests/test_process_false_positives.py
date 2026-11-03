@@ -120,6 +120,14 @@ class TestGetCorrectedClass:
         """The older '60Hz' tag is treated as an alias for 'hum'."""
         assert get_corrected_class("", "60Hz") == "hum"
 
+    def test_tags_60_hz_with_space_alias_returns_hum(self):
+        """A '60 Hz' tag (with a space) is treated as an alias for 'hum'."""
+        assert get_corrected_class("", "60 Hz") == "hum"
+
+    def test_tags_60_hz_with_hyphen_alias_returns_hum(self):
+        """A '60-Hz' tag (with a hyphen) is treated as an alias for 'hum'."""
+        assert get_corrected_class("", "60-Hz") == "hum"
+
     def test_tags_hum_and_60hz_together_returns_hum_once(self):
         """A detection tagged with both 'hum' and '60Hz' still resolves to 'hum'."""
         assert get_corrected_class("", "ship;60Hz;hum") == "hum"
@@ -151,6 +159,18 @@ class TestGetCorrectedClass:
     def test_comments_negated_hum_alone_returns_water(self):
         """'No hum' with no other positive signal resolves to 'water'."""
         assert get_corrected_class("No hum. Nothing else.", None) == "water"
+
+    def test_comments_negated_60hz_falls_through_to_vessel(self):
+        """'Not 60Hz' must not override an explicit vessel/boat signal."""
+        assert get_corrected_class("Not 60hz, just vessel noise.", None) == "vessel"
+
+    def test_comments_negated_electrical_hum_falls_through_to_vessel(self):
+        """'No electrical hum' must not override an explicit vessel/boat signal."""
+        assert get_corrected_class("No electrical hum, just vessel noise.", None) == "vessel"
+
+    def test_comments_negated_hum_with_article_falls_through_to_vessel(self):
+        """'Not a hum' must not override an explicit vessel/boat signal."""
+        assert get_corrected_class("Not a hum, that's clearly a boat.", None) == "vessel"
 
     def test_comments_no_humpback_does_not_falsely_negate_unrelated_hum(self):
         """Negating 'humpback' must not suppress an unrelated, explicit hum signal."""

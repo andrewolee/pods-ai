@@ -118,6 +118,7 @@ F1_METRIC = _load_metric("f1")
 WHALE_CLASS_NAMES = {"humpback", "resident", "transient"}
 CHECKPOINT_SAVE_LIMIT = 6
 DEFAULT_MAX_PREPROCESSING_WORKERS = 8
+TRAIN_TEST_SPLIT_TEST_SIZE = 0.2
 
 
 class FeatureExtractorProtocol(Protocol):
@@ -253,7 +254,7 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
     num_unique_labels = len(label_counts)
     # Mirror datasets.Dataset.train_test_split's own rounding (ceil), not round(),
     # so this estimate matches the actual test-split size it will produce.
-    estimated_test_size = math.ceil(0.2 * len(audio_files))
+    estimated_test_size = math.ceil(TRAIN_TEST_SPLIT_TEST_SIZE * len(audio_files))
     can_stratify = can_stratify_split(
         num_unique_labels, min_samples_per_label, estimated_test_size
     )
@@ -263,11 +264,11 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
         try:
             print("Using stratified train/test split (80/20)")
             dataset = dataset.train_test_split(
-                test_size=0.2, seed=42, stratify_by_column="label"
+                test_size=TRAIN_TEST_SPLIT_TEST_SIZE, seed=42, stratify_by_column="label"
             )
         except ValueError as exc:
             print(f"Warning: stratified split failed ({exc}). Using non-stratified split.")
-            dataset = dataset.train_test_split(test_size=0.2, seed=42)
+            dataset = dataset.train_test_split(test_size=TRAIN_TEST_SPLIT_TEST_SIZE, seed=42)
     else:
         # Cannot use stratification - use random split.
         if num_unique_labels == 1:
@@ -279,7 +280,7 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
                 f"Warning: Test split (~{estimated_test_size} samples) is smaller than the "
                 f"number of classes ({num_unique_labels}). Using non-stratified split."
             )
-        dataset = dataset.train_test_split(test_size=0.2, seed=42)
+        dataset = dataset.train_test_split(test_size=TRAIN_TEST_SPLIT_TEST_SIZE, seed=42)
 
     return dataset
 

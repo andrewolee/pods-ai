@@ -59,14 +59,16 @@ OTHER_TERMS = ("seal","sea lion")
 # "humpback"/"human" both start with "hum" (see HUM_WORD_PATTERN below).
 HUM_TERMS = ("electric", "60hz", "60 hz", "60-hz")
 HUM_WORD_PATTERN = re.compile(r"\bhum(?:s|ming|med)?\b")
-NO_HUM_PATTERN = re.compile(r"\b(?:no|not|nor)\s+hum(?:s|ming|med)?\b")
+NO_HUM_PATTERN = re.compile(
+    r"\b(?:no|not|nor)(?:\s+\w+){0,2}?\s+(?:hum(?:s|ming|med)?|electric\w*|60[\s-]?hz)\b"
+)
 # Priority mirrors podsai_inference.py's live prediction ordering: whale
 # species > sporadic noise (negative) > constant background noise.
 WHALE_CLASSES = {"resident", "transient", "humpback"}
 NEGATIVE_CLASSES = {"jingle", "bird"}
 BACKGROUND_CLASSES = {"vessel", "human", "water", "other", "hum"}
 # Older tag used before moderators standardized on "hum".
-HUM_TAG_ALIASES = {"60hz"}
+HUM_TAG_ALIASES = {"60hz", "60 hz", "60-hz"}
 # Phrases that negate "humpback" or "vessel" labels (e.g. human-written "No humpback nor vessel").
 NO_HUMPBACK_TERMS = ("no humpback", "not humpback")
 NO_VESSEL_TERMS = ("no vessel", "nor vessel", "no boat", "nor boat", "no ship", "nor ship", "no train", "nor train")
