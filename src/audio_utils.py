@@ -40,7 +40,7 @@ MAX_DOWNLOAD_RETRIES = 3
 
 # Seconds to wait between download retry attempts.
 DOWNLOAD_RETRY_DELAY_SECONDS = 2
-PACIFIC_TZ = timezone('US/Pacific')
+PACIFIC_TZ = timezone('America/Los_Angeles')
 UTC_TZ = timezone('UTC')
 COSMOS_URL = os.environ.get("COSMOS_URL", "").strip() or "https://aifororcasmetadatastore.documents.azure.com:443/"
 COSMOS_KEY = os.environ.get("COSMOS_KEY", "").strip()
@@ -204,24 +204,21 @@ def load_m3u8_with_retry(stream_url: str) -> m3u8.M3U8:
     raise last_exception
 
 
-def format_timestamp_pst(dt: datetime) -> str:
-    """
-    Format a datetime object as PST timestamp string in the format YYYY_MM_DD_HH_MM_SS_PST.
-    """
-    dt_pst = dt.astimezone(PACIFIC_TZ)
-    return dt_pst.strftime("%Y_%m_%d_%H_%M_%S_PST")
+def format_timestamp_pacific(dt: datetime) -> str:
+    """Format a datetime in Pacific time as ``YYYY_MM_DD_HH_MM_SS_{TZ}``."""
+    dt_pacific = dt.astimezone(PACIFIC_TZ)
+    return dt_pacific.strftime("%Y_%m_%d_%H_%M_%S_%Z")
 
 
-def parse_timestamp_pst(ts_str: str) -> datetime:
+def parse_timestamp_pacific(ts_str: str) -> datetime:
     """
-    Parse a PST timestamp string in the format YYYY_MM_DD_HH_MM_SS_PST into a timezone-aware datetime.
+    Parse a Pacific timestamp string into a timezone-aware datetime.
     """
-    if not ts_str.endswith("_PST"):
-        raise ValueError(f"Timestamp '{ts_str}' must end with '_PST'")
-    body = ts_str[:-4]
+    if not ts_str.upper().endswith(("_PST", "_PDT")):
+        raise ValueError(f"Timestamp '{ts_str}' must end with '_PST' or '_PDT'")
+    body, abbreviation = ts_str.upper().rsplit("_", 1)
     dt_naive = datetime.strptime(body, "%Y_%m_%d_%H_%M_%S")
-    return PACIFIC_TZ.localize(dt_naive)
-
+    return PACIFIC_TZ.localize(dt_naive, is_dst=abbreviation == "PDT")
 
 def get_node_name_for_feed(feed: OrcasiteFeed) -> str:
     """Retrieve the node name associated with an OrcasiteFeed."""
@@ -308,7 +305,7 @@ def get_machine_detections(
 
 
 def _get_aligned_end_time(timestamp_pst_str: str) -> datetime:
-    raw_end = parse_timestamp_pst(timestamp_pst_str)
+    raw_end = parse_timestamp_pacific(timestamp_pst_str)
     snapped_sec = ((raw_end.second + 9) // 10) * 10
     if snapped_sec == 60:
         # roll over to next minute.
@@ -338,7 +335,7 @@ MIN_SEGMENT_DURATION = 0.001
 FLOAT_TOLERANCE = 1e-9
 
 def _build_clip_id(start_time_utc: datetime) -> str:
-    return start_time_utc.astimezone(PACIFIC_TZ).strftime("%Y_%m_%d_%H_%M_%S_PST")
+    return start_time_utc.astimezone(PACIFIC_TZ).strftime("%Y_%m_%d_%H_%M_%S_%Z")
 
 
 def format_utc_iso_z(dt: datetime) -> str:

@@ -32,14 +32,13 @@ if str(REPO_ROOT) not in sys.path:
 
 from src.audio_utils import (
     download_60s_audio,
-    format_timestamp_pst,
-    parse_timestamp_pst,
+    format_timestamp_pacific,
+    parse_timestamp_pacific,
 )
 
 # Offset, in seconds, between the detection end time and the start of the downloaded audio.
 AUDIO_OFFSET_SECONDS: int = 2
 
-PACIFIC_TZ = timezone('US/Pacific')
 UTC_TZ = timezone('UTC')
 PREFERRED_NOTES = {'tp_machine_only', 'fp_machine_only'}
 QUALITY_FILTER_TERMS = {'faint', 'distant', 'quiet', 'noise'}
@@ -57,22 +56,11 @@ NEGATIVE_CATEGORIES = {'water', 'human', 'vessel', 'jingle', 'bird'}
 OTHER_HUMPBACK_SAMPLES = len(glob.glob(str(REPO_ROOT / 'output' / 'wav' / 'humpback' / 'signals-humpback_*.wav')))
 SEGMENT_DURATION_SECONDS = 3  # Default duration of each audio segment for model inference.
 
-def parse_timestamp(timestamp_str: str) -> datetime:
-    """Parse a PST timestamp string to datetime object."""
-    dt = datetime.strptime(timestamp_str, '%Y_%m_%d_%H_%M_%S_PST')
-    return PACIFIC_TZ.localize(dt)
-
-
-def format_timestamp(dt: datetime) -> str:
-    """Format a datetime object to PST timestamp string."""
-    return dt.strftime('%Y_%m_%d_%H_%M_%S_PST')
-
-
 def subtract_segment_duration(timestamp_str: str, segment_duration: int = SEGMENT_DURATION_SECONDS) -> str:
     """Subtract segment_duration seconds from a PST timestamp string."""
-    dt = parse_timestamp(timestamp_str)
+    dt = parse_timestamp_pacific(timestamp_str)
     dt_minus_offset = dt - timedelta(seconds=segment_duration)
-    return format_timestamp(dt_minus_offset)
+    return format_timestamp_pacific(dt_minus_offset)
 
 
 def generate_uri(original_uri: str, timestamp_str: str) -> str:
@@ -87,7 +75,7 @@ def generate_uri(original_uri: str, timestamp_str: str) -> str:
         URI in format "https://live.orcasound.net/bouts/new/{node}?time={utc_time}"
     """
     # Parse PST timestamp and convert to UTC.
-    dt = parse_timestamp(timestamp_str)
+    dt = parse_timestamp_pacific(timestamp_str)
     utc_dt = dt.astimezone(UTC_TZ)
 
     # Format as ISO 8601 with milliseconds and Z suffix.
@@ -421,7 +409,7 @@ def get_aligned_end_time(timestamp_str: str) -> datetime:
         datetime: Aligned end time snapped to next 10-second boundary
             (rolls over to next minute if seconds become 60)
     """
-    timestamp_pst = parse_timestamp(timestamp_str)
+    timestamp_pst = parse_timestamp_pacific(timestamp_str)
 
     # We need 60 seconds of audio ending at or shortly after the given timestamp.
     raw_end = timestamp_pst
@@ -462,7 +450,7 @@ def compute_correct_timestamp_for_tp_human_only(
     print(f"Computing correct timestamp for tp_human_only: {node_name} - {timestamp_str}")
 
     # Download 60 seconds of audio.
-    min_end_timestamp_pst_str=format_timestamp_pst(parse_timestamp_pst(timestamp_str) + timedelta(seconds=60))
+    min_end_timestamp_pst_str=format_timestamp_pacific(parse_timestamp_pacific(timestamp_str) + timedelta(seconds=60))
     wav_path = download_60s_audio(node_name, min_end_timestamp_pst_str, tmp_dir)
 
     if wav_path is None:
@@ -553,7 +541,7 @@ def compute_correct_timestamp_for_tp_human_only(
         call_time = wav_start_time + timedelta(seconds=time_offset_seconds)
         print(f"  Call detected at: {call_time}")
 
-        return format_timestamp(call_time), max_confidence * 100
+        return format_timestamp_pacific(call_time), max_confidence * 100
 
     except Exception as e:
         print(f"  Error during inference: {e}")

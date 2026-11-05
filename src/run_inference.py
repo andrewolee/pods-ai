@@ -26,7 +26,6 @@ from tempfile import TemporaryDirectory
 from typing import Any, Optional
 
 import ffmpeg
-
 from audio_utils import (
     format_utc_iso_z,
     download_audio_from_start_utc,
@@ -36,6 +35,7 @@ from audio_utils import (
     get_folders_between_timestamp,
     load_m3u8_with_retry,
     PACIFIC_TZ,
+    parse_timestamp_pacific,
 )
 UTC_TZ = timezone.utc
 from model_inference import get_model_inference
@@ -48,12 +48,6 @@ from model_revisions import LATEST_PODSAI_MODEL_REVISION, PODSAI_WAV2VEC2_MODEL_
 PODSAI_MODEL_REVISION = LATEST_PODSAI_MODEL_REVISION
 PROPOSED_DESCRIPTION_EXTRA_CLASSES = {"vessel", "human", "jingle", "bird"}
 NEGATIVE_LABELS = {"abiotic", "other", "water", "vessel", "jingle", "human", "bird"}
-
-
-def parse_pst_end_timestamp(timestamp_str: str) -> datetime:
-    """Parse PST end timestamp format YYYY_MM_DD_HH_MM_SS_PST."""
-    dt = datetime.strptime(timestamp_str, "%Y_%m_%d_%H_%M_%S_PST")
-    return PACIFIC_TZ.localize(dt)
 
 
 def parse_utc_start_timestamp(timestamp_str: str) -> datetime:
@@ -485,8 +479,8 @@ def main() -> int:
         "--end-timestamp-str",
         default=None,
         help=(
-            "PST end timestamp used with --node-name to download audio "
-            "(format: YYYY_MM_DD_HH_MM_SS_PST)."
+            "Pacific end timestamp used with --node-name to download audio "
+            "(format: YYYY_MM_DD_HH_MM_SS_{TZ})."
         ),
     )
     parser.add_argument(
@@ -603,7 +597,7 @@ def main() -> int:
                 if args.start_timestamp_utc is not None:
                     start_time_utc = parse_utc_start_timestamp(args.start_timestamp_utc)
                 else:
-                    end_time_pst = parse_pst_end_timestamp(end_timestamp_str)
+                    end_time_pst = parse_timestamp_pacific(end_timestamp_str)
                     start_time_utc = end_time_pst.astimezone(UTC_TZ) - timedelta(seconds=duration_seconds)
                 wav_path = download_audio_from_start_utc(
                     args.node_name, start_time_utc, temp_dir, duration_seconds=duration_seconds

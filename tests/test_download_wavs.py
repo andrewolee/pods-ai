@@ -343,10 +343,9 @@ class TestAlignedEntryValidation:
             with pytest.raises(
                 ValueError,
                 match=r"old testing_row: human,rpi_sunset_bay,2024_07_19_12_51_09_PST,https://live\.orcasound\.net/bouts/new/sunset-bay\?time=2024-07-19T19%3A51%3A09\.000Z,Human voices causing false positives despite significant noise from something contacting ladder and/or hydrophone\.,fp_machine_only,54\.4156\n"
-                r"  new testing_row: human,rpi_sunset_bay,2024_07_19_12_50_08_PST,https://live\.orcasound\.net/bouts/new/sunset-bay\?time=2024-07-19T19%3A50%3A08\.000Z,Human voices causing false positives despite significant noise from something contacting ladder and/or hydrophone\.,fp_machine_only,54\.4156",
+                r"  new testing_row: human,rpi_sunset_bay,2024_07_19_12_50_08_PDT,https://live\.orcasound\.net/bouts/new/sunset-bay\?time=2024-07-19T19%3A50%3A08\.000Z,Human voices causing false positives despite significant noise from something contacting ladder and/or hydrophone\.,fp_machine_only,54\.4156",
             ):
                 validate_aligned_entries(testing_rows)
-
 
 class TestCacheAndCleanup:
     def test_process_csv_copies_from_cache_without_downloading(self):

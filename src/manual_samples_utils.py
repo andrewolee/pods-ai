@@ -4,7 +4,7 @@
 """Shared helpers for reading and appending manual_samples.csv rows."""
 
 import csv
-from audio_utils import parse_timestamp_pst
+from audio_utils import parse_timestamp_pacific
 from datetime import timedelta
 from pathlib import Path
 from typing import Iterable
@@ -145,8 +145,8 @@ def _samples_overlap(
     left_row = as_csv_row(left, left_key)
     right_row = as_csv_row(right, right_key)
     try:
-        parse_timestamp_pst(left_row.timestamp_pst)
-        parse_timestamp_pst(right_row.timestamp_pst)
+        parse_timestamp_pacific(left_row.timestamp_pst)
+        parse_timestamp_pacific(right_row.timestamp_pst)
     except ValueError:
         return False
     if left_duration == right_duration == 3:
@@ -158,8 +158,8 @@ def _samples_overlap(
     elif left_duration == 60 and right_duration == 3:
         training_rows, testing_rows = [right_row], [left_row]
     else:
-        left_start = parse_timestamp_pst(left_row.timestamp_pst)
-        right_start = parse_timestamp_pst(right_row.timestamp_pst)
+        left_start = parse_timestamp_pacific(left_row.timestamp_pst)
+        right_start = parse_timestamp_pacific(right_row.timestamp_pst)
         left_end = left_start + timedelta(seconds=left_duration)
         right_end = right_start + timedelta(seconds=right_duration)
         return max(left_start, right_start) < min(left_end, right_end)

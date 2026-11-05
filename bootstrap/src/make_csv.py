@@ -20,8 +20,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.audio_utils import (
-    format_timestamp_pst,
-    parse_timestamp_pst,
+    format_timestamp_pacific,
+    parse_timestamp_pacific,
 )
 
 import importlib.util
@@ -508,7 +508,7 @@ def process_all_feeds(
             # Collect row data with timestamp for sorting.
             category = label
             node_name = det.feed.node_name  # e.g., "rpi_sunset_bay"
-            timestamp_pst = format_timestamp_pst(det.timestamp)
+            timestamp_pst = format_timestamp_pacific(det.timestamp)
             uri = generate_uri(det.feed.slug, det.timestamp)
 
             # Get confidence from orcahello_match if available.
@@ -590,8 +590,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    start_time = parse_timestamp_pst(args.start) if args.start else None
-    end_time = None if (args.end or "").lower() == "now" else parse_timestamp_pst(args.end)
+    start_time = parse_timestamp_pacific(args.start) if args.start else None
+    end_time = None if (args.end or "").lower() == "now" else parse_timestamp_pacific(args.end)
 
     output_root = Path("bootstrap/csv")
     process_all_feeds(output_root, feed_filter=args.feed, start_time=start_time, end_time=end_time)

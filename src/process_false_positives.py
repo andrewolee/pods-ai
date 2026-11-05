@@ -29,9 +29,9 @@ from add_samples import DEFAULT_DETECTIONS_CSV, DEFAULT_MODEL_PATH, DEFAULT_OUTP
 from audio_utils import (
     SKIP_TERMS,
     download_60s_audio,
-    format_timestamp_pst,
+    format_timestamp_pacific,
     get_machine_detections,
-    parse_timestamp_pst,
+    parse_timestamp_pacific,
 )
 from manual_samples_utils import (
     append_manual_samples,
@@ -197,7 +197,7 @@ def process_false_positives(
             if end_time is not None and detection.timestamp > end_time:
                 continue
 
-            timestamp_str_pst = format_timestamp_pst(
+            timestamp_str_pst = format_timestamp_pacific(
                 detection.timestamp - timedelta(seconds=AUDIO_OFFSET_SECONDS)
             )
             summary["rejected"] += 1
@@ -216,7 +216,7 @@ def process_false_positives(
                 if not for_training:
                     print(f"Checking rejected detection at {timestamp_str_pst}")
 
-                    min_end_timestamp_pst_str = format_timestamp_pst(detection.timestamp + timedelta(seconds=60))
+                    min_end_timestamp_pst_str = format_timestamp_pacific(detection.timestamp + timedelta(seconds=60))
                     wav_path = download_60s_audio(node_name=feed.node_name, min_end_timestamp_pst_str=min_end_timestamp_pst_str, tmp_dir=temp_dir)
                     if wav_path is None:
                         print(f"Skipping {feed.node_name} {timestamp_str_pst}: failed to download audio.")
@@ -252,7 +252,7 @@ def process_false_positives(
                 else:
                     print(f"Checking rejected detection at {timestamp_str_pst}")
 
-                    min_end_timestamp_pst_str = format_timestamp_pst(detection.timestamp + timedelta(seconds=60))
+                    min_end_timestamp_pst_str = format_timestamp_pacific(detection.timestamp + timedelta(seconds=60))
                     wav_path = download_60s_audio(node_name=feed.node_name, min_end_timestamp_pst_str=min_end_timestamp_pst_str, tmp_dir=temp_dir)
                     if wav_path is None:
                         print(f"Skipping {feed.node_name} {timestamp_str_pst}: failed to download audio.")
@@ -453,8 +453,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    start_time = parse_timestamp_pst(args.start) if args.start else None
-    end_time = None if (args.end or "").lower() == "now" else parse_timestamp_pst(args.end)
+    start_time = parse_timestamp_pacific(args.start) if args.start else None
+    end_time = None if (args.end or "").lower() == "now" else parse_timestamp_pacific(args.end)
     result_set = args.set.lower()
     if result_set not in ("training", "testing"):
         print(f"Invalid set value: {args.set}. Must be 'training' or 'testing'.")

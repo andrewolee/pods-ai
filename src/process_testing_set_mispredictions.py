@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
-from audio_utils import format_timestamp_pst, parse_timestamp_pst
+from audio_utils import format_timestamp_pacific, parse_timestamp_pacific
 
 TARGET_LABELS = ("resident", "transient", "humpback")
 TRAINING_COLUMNS = [
@@ -42,7 +42,7 @@ def normalize_label(label: Any) -> str:
 
 def _to_utc_time_param(timestamp_pst: str) -> str:
     """Convert YYYY_MM_DD_HH_MM_SS_PST to UTC ISO string used by bouts URLs."""
-    utc_dt = parse_timestamp_pst(timestamp_pst).astimezone(timezone.utc)
+    utc_dt = parse_timestamp_pacific(timestamp_pst).astimezone(timezone.utc)
     return utc_dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 
@@ -150,8 +150,8 @@ def build_training_row(
     hop_duration: float,
 ) -> dict[str, str]:
     """Compose a training_3s_samples-style row for one segment proposal."""
-    clip_start = parse_timestamp_pst((testing_row.get("StartTimestamp") or "").strip())
-    segment_timestamp = format_timestamp_pst(
+    clip_start = parse_timestamp_pacific((testing_row.get("StartTimestamp") or "").strip())
+    segment_timestamp = format_timestamp_pacific(
         clip_start + timedelta(seconds=segment_index * float(hop_duration))
     )
     return {
