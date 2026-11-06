@@ -231,8 +231,6 @@ The active scripts in `src` include:
   Abiotic samples accept water, vessel, and jingle predictions as correct.
   Reports correct identifications, false positives, false negatives, and average prediction time for each model.
 
-Bootstrap-only generation scripts and archived CSV inputs now live under [`bootstrap/`](bootstrap/README.md).
-
 ## Data Flow Architecture
 
 ```mermaid

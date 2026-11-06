@@ -34,7 +34,7 @@ If a corrected class is provided, rows whose predicted class already matches the
 corrected class are omitted from the printed output.
 
 URI/Description/Notes Lookup:
-- The script looks up the detection in detections.csv (default: bootstrap/csv/detections.csv)
+- The script looks up the detection in detections.csv (default: output/csv/testing_60s_samples.csv)
   by matching NodeName and StartTimestamp, and uses the URI, Description, and Notes from that row
 - If not found in detections.csv, generates a URI from the timestamp and uses
   fallback_description when provided (otherwise empty Description), with Notes="manual"
@@ -74,7 +74,7 @@ HOP_DURATION = 2  # Hop size between segments in seconds.
 DEFAULT_OUTPUT_DIR = "new"  # Default output directory for segments.
 DEFAULT_MODEL_PATH = "davethaler/whale-call-detector"  # Default HuggingFace model ID.
 from model_revisions import LATEST_PODSAI_MODEL_REVISION
-DEFAULT_DETECTIONS_CSV = "bootstrap/csv/detections.csv"  # Default path to detections.csv
+DEFAULT_DETECTIONS_CSV = "output/csv/testing_60s_samples.csv"  # Default path to detections csv.
 PACIFIC_TZ = timezone("America/Los_Angeles")  # Pacific timezone for timestamp formatting.
 UTC_TZ = timezone("UTC")  # UTC timezone for URI generation.
 
@@ -483,7 +483,7 @@ def add_training_3s_samples(
             (default: DEFAULT_MODEL_PATH).
         model_revision: Git commit hash to pin the HuggingFace Hub model revision.
             Ignored when model_path is a local directory (default: LATEST_PODSAI_MODEL_REVISION).
-        detections_csv: Path to detections.csv for detection lookup (default: "bootstrap/csv/detections.csv").
+        detections_csv: Path to detections.csv for detection lookup (default: "output/csv/testing_60s_samples.csv").
         model: Optional preloaded PODS-AI inference model to reuse instead of
             loading from model_path.
         corrected_class: Optional corrected class. When provided, rows whose
@@ -646,7 +646,7 @@ def add_testing_60s_sample(
         start_timestamp: PST timestamp of the start of the recording
             (e.g., "2025_01_15_12_30_00_PST").
             Inferred from wav_file filename or uri if not provided.
-        detections_csv: Path to detections.csv for detection lookup (default: "bootstrap/csv/detections.csv").
+        detections_csv: Path to detections.csv for detection lookup (default: "output/csv/testing_60s_samples.csv").
         corrected_class: Optional corrected class. When provided, rows whose
             predicted class already matches this class are not printed.
         fallback_description: Optional description to use when the detection

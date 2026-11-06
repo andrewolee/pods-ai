@@ -39,14 +39,10 @@ MODEL_URL=https://trainedproductionmodels.blob.core.windows.net/dnnmodel/11-15-2
     <Compile Include="src\compare_models.py" />
     <Compile Include="src\concatenate_wavs.py" />
     <Compile Include="src\download_wavs.py" />
-    <Compile Include="bootstrap\src\extract_training_samples.py" />
-    <Compile Include="bootstrap\src\get_best_timestamp.py" />
     <Compile Include="src\generate_embeddings.py" />
     <Compile Include="src\LiveInferenceOrchestrator.py" />
-    <Compile Include="bootstrap\src\make_csv.py" />
     <Compile Include="src\make_spectrograms.py" />
     <Compile Include="src\manual_samples_utils.py" />
-    <Compile Include="bootstrap\src\merge_training_samples.py" />
     <Compile Include="src\mcp_server.py" />
     <Compile Include="src\model_inference.py" />
     <Compile Include="src\model_revisions.py" />
@@ -66,11 +62,8 @@ MODEL_URL=https://trainedproductionmodels.blob.core.windows.net/dnnmodel/11-15-2
     <Compile Include="tests\test_compare_models.py" />
     <Compile Include="tests\test_generate_embeddings.py" />
     <Compile Include="tests\test_download_wavs.py" />
-    <Compile Include="tests\test_extract_training_samples.py" />
-    <Compile Include="tests\test_get_best_timestamp.py" />
     <Compile Include="tests\test_inference_event_aggregation.py" />
     <Compile Include="tests\test_live_inference_orchestrator.py" />
-    <Compile Include="tests\test_make_csv.py" />
     <Compile Include="tests\test_mcp_server.py" />
     <Compile Include="tests\test_podsai_inference.py" />
     <Compile Include="tests\test_process_false_negatives.py" />
@@ -83,8 +76,6 @@ MODEL_URL=https://trainedproductionmodels.blob.core.windows.net/dnnmodel/11-15-2
   <ItemGroup>
     <Folder Include="tests\" />
     <Folder Include="src\" />
-    <Folder Include="bootstrap\" />
-    <Folder Include="bootstrap\src\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="MCP_USAGE.md" />

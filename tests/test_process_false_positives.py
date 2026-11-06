@@ -6,7 +6,7 @@ import csv
 from datetime import datetime, timezone
 from unittest.mock import patch
 
-from make_csv import OrcaHelloDetection
+from audio_utils import OrcaHelloDetection
 from orcasite_feeds import OrcasiteFeed
 from process_false_positives import (
     append_manual_samples,

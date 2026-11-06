@@ -786,7 +786,7 @@ class TestAddTesting60sSample:
         mock_lookup.assert_called_once_with(
             "rpi_orcasound_lab",
             "2025_01_15_12_30_00_PST",
-            "bootstrap/csv/detections.csv",
+            "output/csv/testing_60s_samples.csv",
         )
         assert row["Description"] == "from detections"
         assert row["Notes"] == "from_notes"

@@ -3,8 +3,8 @@
 """
 Common utilities for audio downloading and S3 operations.
 
-This module contains shared functions used by both extract_training_samples.py
-and download_wavs.py to avoid code duplication.
+This module contains shared functions used by download_wavs.py and potentially
+other scripts to avoid code duplication.
 """
 
 from dataclasses import dataclass
