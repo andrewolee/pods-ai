@@ -57,8 +57,12 @@ namespace DatasetManager
         /// <returns>A list of sample records loaded from the CSV string.</returns>
         public static List<SampleRecord> LoadSamplesFromText(string csvText)
         {
-            using var reader = new StringReader(csvText);
-            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+            using var csv = CsvReader.FromText(
+                csvText,
+                new CsvReaderOptions
+                {
+                    FormatProvider = CultureInfo.InvariantCulture,
+                });
             return LoadSamplesFromCsv(csv);
         }
 
@@ -69,8 +73,13 @@ namespace DatasetManager
         /// <returns>A list of sample records loaded from the CSV file.</returns>
         private static List<SampleRecord> LoadSamples(string path)
         {
-            using var reader = new StreamReader(path);
-            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+            using var csv = CsvReader.FromFile(
+                path,
+                new CsvReaderOptions
+                {
+                    FormatProvider = CultureInfo.InvariantCulture,
+                },
+                FileOptions.None);
             return LoadSamplesFromCsv(csv);
         }
 
@@ -81,8 +90,13 @@ namespace DatasetManager
         /// <param name="path">The path to the CSV file.</param>
         private void SaveSamples(IEnumerable<SampleRecord> samples, string path)
         {
-            using var writer = new StreamWriter(path);
-            using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+            using var csv = CsvWriter.ToFile(
+                path,
+                new CsvWriterOptions
+                {
+                    FormatProvider = CultureInfo.InvariantCulture,
+                },
+                FileOptions.None);
             csv.WriteRecords(samples);
         }
 
