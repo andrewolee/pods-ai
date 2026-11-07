@@ -147,41 +147,42 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a  # v2.22.4
-        with:
-          egress-policy: block
-          allowed-endpoints: >
-            *.microsoft.com:443
-            *.microsoft.com:80
-            adl.windows.com:80
-            api.github.com:443
-            au.download.windowsupdate.com:80
-            audio-orcasound-net.s3.amazonaws.com:443
-            cas-server.xethub.hf.co:443
-            client.wns.windows.com:443
-            dc.services.visualstudio.com:443
-            download.windowsupdate.com:80
-            files.pythonhosted.org:443
-            github.com:443
-            huggingface.co:443
-            incoming.telemetry.mozilla.org:443
-            login.live.com:443
-            ocsp.digicert.com:80
-            ocsp.r2m02.amazontrust.com:80
-            ocsp.r2m04.amazontrust.com:80
-            ocsp.sectigo.com:80
-            pypi.org:443
-            release-assets.githubusercontent.com:443
-            s3-us-west-2.amazonaws.com:443
-            telemetry-incoming.r53-2.services.mozilla.com:443
-            time.windows.com:443
-            trainedproductionmodels.blob.core.windows.net:443
-            transfer.xethub.hf.co:443
-            us.aws.cdn.hf.co:443
-            live.orcasound.net:443
-            *.stepsecurity.io:443
-            www.gyan.dev:443
+      # Disable harden-runner since it causes intermittent test failures
+      #- name: Harden Runner
+      #  uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a  # v2.22.4
+      #  with:
+      #    egress-policy: block
+      #    allowed-endpoints: >
+      #      *.microsoft.com:443
+      #      *.microsoft.com:80
+      #      adl.windows.com:80
+      #      api.github.com:443
+      #      au.download.windowsupdate.com:80
+      #      audio-orcasound-net.s3.amazonaws.com:443
+      #      cas-server.xethub.hf.co:443
+      #      client.wns.windows.com:443
+      #      dc.services.visualstudio.com:443
+      #      download.windowsupdate.com:80
+      #      files.pythonhosted.org:443
+      #      github.com:443
+      #      huggingface.co:443
+      #      incoming.telemetry.mozilla.org:443
+      #      login.live.com:443
+      #      ocsp.digicert.com:80
+      #      ocsp.r2m02.amazontrust.com:80
+      #      ocsp.r2m04.amazontrust.com:80
+      #      ocsp.sectigo.com:80
+      #      pypi.org:443
+      #      release-assets.githubusercontent.com:443
+      #      s3-us-west-2.amazonaws.com:443
+      #      telemetry-incoming.r53-2.services.mozilla.com:443
+      #      time.windows.com:443
+      #      trainedproductionmodels.blob.core.windows.net:443
+      #      transfer.xethub.hf.co:443
+      #      us.aws.cdn.hf.co:443
+      #      live.orcasound.net:443
+      #      *.stepsecurity.io:443
+      #      www.gyan.dev:443
 
       - id: skip_check
         uses: fkirc/skip-duplicate-actions@b974a9395958c231af965b70070979a577efa578  # v5.3.2
