@@ -130,20 +130,18 @@ def get_folders_between_timestamp(bucket_list: List[str], start_time: int, end_t
     return bucket_list[max(0, start_index - 1) : end_index + 1]
 
 
-def get_difference_between_times_in_seconds(unix_time1: int, unix_time2: int) -> float:
+def get_difference_between_times_in_seconds(later_unix_time: int, earlier_unix_time: int) -> float:
     """
     Calculate the difference between two unix timestamps in seconds.
     
     Parameters:
-        unix_time1 (int): First unix timestamp.
-        unix_time2 (int): Second unix timestamp.
+        later_unix_time (int): Later unix timestamp.
+        earlier_unix_time (int): Earlier unix timestamp.
     
     Returns:
         float: Difference in seconds.
     """
-    dt1 = datetime.fromtimestamp(int(unix_time1))
-    dt2 = datetime.fromtimestamp(int(unix_time2))
-    return (dt1 - dt2).total_seconds()
+    return later_unix_time - earlier_unix_time
 
 
 def download_from_url(dl_url: str, dl_dir: str):

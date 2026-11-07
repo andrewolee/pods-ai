@@ -59,6 +59,7 @@ MODEL_URL=https://trainedproductionmodels.blob.core.windows.net/dnnmodel/11-15-2
     <Compile Include="tests\conftest.py" />
     <Compile Include="tests\test_build_readme.py" />
     <Compile Include="tests\test_add_samples.py" />
+    <Compile Include="tests\test_audio_utils.py" />
     <Compile Include="tests\test_compare_models.py" />
     <Compile Include="tests\test_generate_embeddings.py" />
     <Compile Include="tests\test_download_wavs.py" />
