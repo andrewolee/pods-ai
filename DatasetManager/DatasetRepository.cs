@@ -151,7 +151,7 @@ namespace DatasetManager
         private void ReadModelComparison()
         {
             string rootPath = GetRootPath();
-            string modelComparisonPath = Path.Combine(rootPath, "model-comparison.txt");
+            string modelComparisonPath = Path.Combine(rootPath, "model-comparison-podsai.txt");
             if (File.Exists(modelComparisonPath))
             {
                 string text = File.ReadAllText(modelComparisonPath);

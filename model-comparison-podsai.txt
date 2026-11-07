@@ -1,0 +1,29 @@
+================================================================================================================
+Model Comparison Summary
+================================================================================================================
+Model           Evaluated   Correct  Accuracy      F1    RFP%    RFN%    TFP%    TFN%    HFP%    HFN%   Avg Time
+----------------------------------------------------------------------------------------------------------------
+podsai                832       264     31.7%   0.697    5.1%   21.4%    1.1%   21.4%    0.2%   60.0%      6.75s
+================================================================================================================
+
+Definitions:
+  Accuracy     = Correct / Evaluated
+  Correct      = fastai/orcahello: resident vs other; wav2vec2/oldpodsai/podsai/custom: category in prediction set
+                 abiotic also accepts water, vessel, or jingle
+  F1           = macro F1 over humpback, resident, and transient classes that are present
+  [R|T|H]FP%   = among non-[R|T|H] samples, fraction predicted as that class
+  [R|T|H]FN%   = among actual samples of that class, fraction predicted as another class
+  Avg Time     = average time spent in model predict() per 60-second WAV file
+  Note         = compares end-to-end 60-second inference on all WAV files in --wav-dir
+
+Confusion Matrix for podsai (rows=actual, cols=predicted):
+                  bird      human   humpback     jingle   resident  transient     vessel      water      total
+    abiotic         14          5          0         30          2          1        421         23        496
+       bird          2          0          0          0          5          0          3          0         10
+      human          0          7          0          2          0          0          0          0          9
+   humpback          0          0          6          3          0          0          6          0         15
+     jingle          0          0          0         14          0          0          0          0         14
+   resident          3          0          0          6        191          0         40          3        243
+  transient          0          0          0          0          8         18          2          0         28
+     vessel          0          0          0          0          0          0          6          0          6
+      water          0          0          0          0          0          0          8          3         11
