@@ -25,29 +25,28 @@ jobs:
           - podsai
 
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a  # v2.22.4
-        with:
-          egress-policy: block
-          allowed-endpoints: >
-            *.archive.ubuntu.com:80
-            security.ubuntu.com:443
-            api.github.com:443
-            archive.ubuntu.com:443
-            audio-orcasound-net.s3.amazonaws.com:443
-            dl.google.com:443
-            esm.ubuntu.com:443
-            files.pythonhosted.org:443
-            github.com:443
-            uploads.github.com:443
-            *.githubusercontent.com:443
-            *.blob.core.windows.net:443
-            huggingface.co:443
-            cdn-lfs.huggingface.co:443
-            pypi.org:443
-            s3-us-west-2.amazonaws.com:443
-            live.orcasound.net:443
-            aifororcasdetections.azurewebsites.net:443
+      #- name: Harden Runner
+      #  uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a  # v2.22.4
+      #  with:
+      #    egress-policy: block
+      #    allowed-endpoints: >
+      #      *.archive.ubuntu.com:80
+      #      security.ubuntu.com:443
+      #      api.github.com:443
+      #      archive.ubuntu.com:443
+      #      audio-orcasound-net.s3.amazonaws.com:443
+      #      dl.google.com:443
+      #      esm.ubuntu.com:443
+      #      files.pythonhosted.org:443
+      #      github.com:443
+      #      uploads.github.com:443
+      #      *.githubusercontent.com:443
+      #      huggingface.co:443
+      #      cdn-lfs.huggingface.co:443
+      #      pypi.org:443
+      #      s3-us-west-2.amazonaws.com:443
+      #      live.orcasound.net:443
+      #      aifororcasdetections.azurewebsites.net:443
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
