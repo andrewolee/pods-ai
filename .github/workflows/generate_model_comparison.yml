@@ -151,14 +151,32 @@ jobs:
             exit 0
           fi
 
-          git checkout -B "$PUSH_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ "$PUSH_BRANCH" = "update-model-comparison" ]; then
+            # Start from current main, not from github.sha.
+            git fetch origin main
+            git checkout -B "$PUSH_BRANCH" origin/main
+          else
+            git checkout -B "$PUSH_BRANCH"
+          fi
+
           if [ -z "$(git status --porcelain model-comparison-*.txt README.md)" ]; then
             echo "Model comparison and README are unchanged."
             exit 0
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add model-comparison-*.txt README.md
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
           git commit -m "Update model comparison and README"
+
+          # Useful diagnostic if push ever fails.
+          git log --oneline -5
+
           git push --force-with-lease origin "${PUSH_BRANCH}"
