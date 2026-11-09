@@ -16,9 +16,9 @@ Model Comparison Summary
 ================================================================================================================
 Model           Evaluated   Correct  Accuracy      F1    RFP%    RFN%    TFP%    TFN%    HFP%    HFN%   Avg Time
 ----------------------------------------------------------------------------------------------------------------
-orcahello             832       714     85.8%   0.263   16.1%    9.5%    0.0%  100.0%    0.0%  100.0%      4.20s
-oldpodsai             832       269     32.3%   0.679    8.5%   16.9%    0.1%   35.7%    0.2%   66.7%      6.73s
-podsai                832       264     31.7%   0.697    5.1%   21.4%    1.1%   21.4%    0.2%   60.0%      6.75s
+orcahello             830       710     85.5%   0.261   16.3%    9.9%    0.0%  100.0%    0.0%  100.0%      5.42s
+oldpodsai             830       766     92.3%   0.746    8.8%   16.5%    0.0%   39.3%    0.2%   42.9%     10.82s
+podsai                830       761     91.7%   0.777    5.4%   21.5%    0.9%   17.9%    0.2%   35.7%     10.75s
 ================================================================================================================
 
 Definitions:
@@ -36,36 +36,36 @@ Confusion Matrix for orcahello (rows=actual, cols=predicted):
     abiotic       486        10       496
        bird         0        10        10
       human         0         9         9
-   humpback         7         8        15
+   humpback         4        10        14
      jingle         0        14        14
-   resident        23       220       243
-  transient         0        28        28
+   resident        24       218       242
+  transient         1        27        28
      vessel         0         6         6
       water         1        10        11
 
 Confusion Matrix for oldpodsai (rows=actual, cols=predicted):
                  human   humpback     jingle   resident  transient     vessel      water      total
     abiotic          0          1        242         13          0        220         20        496
-       bird          0          0          2          7          0          1          0         10
+       bird          0          0          2          6          0          2          0         10
       human          8          0          1          0          0          0          0          9
-   humpback          0          5          6          1          0          2          1         15
+   humpback          0          6          3          4          0          0          1         14
      jingle          0          0         12          2          0          0          0         14
-   resident          1          0         15        202          0         22          3        243
-  transient          0          0          0         20          7          1          0         28
+   resident          1          0         13        202          0         22          4        242
+  transient          0          0          0         19          8          1          0         28
      vessel          0          0          0          0          0          6          0          6
       water          0          0          1          0          0          5          5         11
 
 Confusion Matrix for podsai (rows=actual, cols=predicted):
                   bird      human   humpback     jingle   resident  transient     vessel      water      total
     abiotic         14          5          0         30          2          1        421         23        496
-       bird          2          0          0          0          5          0          3          0         10
+       bird          1          0          0          0          7          0          2          0         10
       human          0          7          0          2          0          0          0          0          9
-   humpback          0          0          6          3          0          0          6          0         15
+   humpback          0          0          8          1          1          0          3          1         14
      jingle          0          0          0         14          0          0          0          0         14
-   resident          3          0          0          6        191          0         40          3        243
-  transient          0          0          0          0          8         18          2          0         28
+   resident          4          0          0          4        190          0         40          4        242
+  transient          0          0          0          0         10         16          2          0         28
      vessel          0          0          0          0          0          0          6          0          6
-      water          0          0          0          0          0          0          8          3         11
+      water          0          0          0          0          0          0          9          2         11
 ```
 
 NOTE 1: The results above may be biased against models, compared to what would be expected on live
@@ -227,7 +227,7 @@ The active scripts in `src` include:
 - [**LiveInferenceOrchestrator.py**](docs/LiveInferenceOrchestrator.md): Runs live/date-range HLS inference with the multiclass
   PODS-AI model and can upload positive detections (resident/transient/humpback)
   to Azure Blob Storage and Cosmos DB.
-- [**compare_models.py**](docs/compare-models.md): Evaluates and compares fastai, orcahello, podsai (AST), and oldpodsai (Wav2Vec2) models
+- [**compare_models.py**](docs/compare-models.md): Evaluates and compares fastai, orcahello, podsai (latest), and oldpodsai (deployed) models
   on the test set loaded from `output/csv/testing_60s_samples.csv` and downloaded by `download_wavs.py`.
   Abiotic samples accept water, vessel, and jingle predictions as correct.
   Reports correct identifications, false positives, false negatives, and average prediction time for each model.
