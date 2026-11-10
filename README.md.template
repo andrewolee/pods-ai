@@ -46,7 +46,7 @@ pip install -r requirements.txt
 
 Optional: ONNX support
 
-If you plan to export a model to ONNX or use an ONNX inference backend with `compare_models.py`, install the ONNX dependencies:
+If you plan to export a model to ONNX or use an ONNX inference backend with `compare_models.py` or `run_inference.py`, install the ONNX dependencies:
 
 ```
 pip install -r requirements-onnx.txt

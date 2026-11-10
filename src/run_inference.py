@@ -7,8 +7,11 @@ Run inference on a wav file and output per-class probabilities.
 Usage:
     python run_inference.py sample.wav
     python run_inference.py sample.wav --model podsai --model-path /path/to/podsai-model
+    python run_inference.py sample.wav --model-path podsai.onnx
     python run_inference.py sample.wav --model fastai --model-path ../model
     python run_inference.py --node-name rpi_sunset_bay --end-timestamp-str 2025_01_15_12_30_00_PST
+
+ONNX inference requires the optional dependencies in requirements-onnx.txt.
 """
 
 import argparse
@@ -520,7 +523,7 @@ def main() -> int:
         "--model-path",
         default=None,
         help=(
-            "Path to model directory or HuggingFace Hub model ID. "
+            "Path to model directory, HuggingFace Hub model ID, or PODS-AI ONNX file. "
             "Defaults to ./model for --model fastai. "
             "Defaults to orcasound/orcahello-srkw-detector-v1 for --model orcahello. "
             f"Defaults to {PODSAI_MODEL_ID!r} for --model podsai."

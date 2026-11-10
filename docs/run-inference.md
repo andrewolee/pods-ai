@@ -31,10 +31,26 @@ usage: python run_inference.py [wav_file]
 | `--set` | With `--node-name`: `training` downloads a 3-second clip, `testing` (default) downloads a 60-second clip. Ignored when `wav_file` is given |
 | `--model` | Model type: `podsai` (default), `fastai`, or `orcahello` |
 | `--type` | PODS-AI model variant used with `--model podsai`: `ast` (default) or `wav2vec2` (older model variant). These map to the currently pinned revisions in `src/run_inference.py` |
-| `--model-path` | Path to model directory or HuggingFace Hub model ID. Defaults to `./model` for `fastai`; defaults to `orcasound/orcahello-srkw-detector-v1` for `orcahello`; defaults to `davethaler/whale-call-detector` for `podsai` |
+| `--model-path` | Path to model directory, HuggingFace Hub model ID, or PODS-AI ONNX file. Defaults to `./model` for `fastai`; defaults to `orcasound/orcahello-srkw-detector-v1` for `orcahello`; defaults to `davethaler/whale-call-detector` for `podsai` |
 
 When using `--node-name`, provide exactly one timestamp argument:
 `--end-timestamp-str` or `--start-timestamp-utc`.
+
+## ONNX inference
+
+ONNX inference is supported for PODS-AI models. Install the optional dependencies
+from the repository root:
+
+```bash
+pip install -r requirements-onnx.txt
+```
+
+Then pass a PODS-AI-compatible ONNX file to `--model-path`:
+
+```bash
+cd src
+python run_inference.py sample.wav --model podsai --model-path ../podsai.onnx
+```
 
 **Example — PODS-AI model**
 
