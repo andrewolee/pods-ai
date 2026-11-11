@@ -74,7 +74,7 @@ def test_multilabel_prediction_counts_matching_species_as_correct():
     assert not is_correct_prediction("humpback", "resident", "podsai", ["resident", "transient"])
 
 
-@pytest.mark.parametrize("model_type", ["podsai", "oldpodsai", "wav2vec2", "custom"])
+@pytest.mark.parametrize("model_type", ["podsai", "oldpodsai", "custom"])
 @pytest.mark.parametrize("predicted_label", ["water", "vessel", "jingle"])
 @pytest.mark.parametrize("multilabel", [False, True])
 def test_abiotic_accepts_specific_predictions(model_type, predicted_label, multilabel):
@@ -251,7 +251,6 @@ def test_main_forwards_orcahello_model_revision(tmp_path):
     ("model_name", "path_option", "display_name"),
     [
         ("custom", "--custom-model-path", "custom"),
-        ("wav2vec2", "--podsai-model-path", "wav2vec2"),
         ("oldpodsai", "--podsai-model-path", "oldpodsai"),
         ("podsai", "--podsai-model-path", "podsai"),
         ("orcahello", "--orcahello-model-path", "orcahello"),
@@ -317,7 +316,7 @@ def test_custom_model_uses_category_membership_for_abiotic():
     from compare_models import is_correct_prediction
 
     assert is_correct_prediction("abiotic", "other", "custom", ["abiotic"])
-    assert is_correct_prediction("abiotic", "other", "fastai", ["other"])
+    assert is_correct_prediction("abiotic", "other", "orcahello", ["other"])
 
 
 # ---------------------------------------------------------------------------
@@ -423,56 +422,56 @@ class TestModelResultProperties:
     def test_evaluated_excludes_skipped(self):
         """evaluated = total - skipped."""
         from compare_models import ModelResult
-        r = ModelResult(model_type="fastai", total=10, skipped=3)
+        r = ModelResult(model_type="podsai", total=10, skipped=3)
         assert r.evaluated == 7
 
     def test_accuracy_none_when_no_evaluated(self):
         """accuracy is None when evaluated == 0."""
         from compare_models import ModelResult
-        r = ModelResult(model_type="fastai", total=5, skipped=5)
+        r = ModelResult(model_type="podsai", total=5, skipped=5)
         assert r.accuracy is None
 
     def test_accuracy_correct_fraction(self):
         """accuracy is correct/evaluated."""
         from compare_models import ModelResult
-        r = ModelResult(model_type="fastai", total=10, correct=8, skipped=0)
+        r = ModelResult(model_type="podsai", total=10, correct=8, skipped=0)
         assert abs(r.accuracy - 0.8) < 1e-9
 
     def test_false_positive_rate_none_when_no_evaluated(self):
         """false_positive_rate is None when evaluated == 0."""
         from compare_models import ModelResult
-        r = ModelResult(model_type="fastai", total=3, skipped=3)
+        r = ModelResult(model_type="podsai", total=3, skipped=3)
         assert r.false_positive_rate is None
 
     def test_false_positive_rate_correct_fraction(self):
         """false_positive_rate is false_positives/evaluated."""
         from compare_models import ModelResult
-        r = ModelResult(model_type="fastai", total=10, false_positives=2, skipped=0)
+        r = ModelResult(model_type="podsai", total=10, false_positives=2, skipped=0)
         assert abs(r.false_positive_rate - 0.2) < 1e-9
 
     def test_false_negative_rate_correct_fraction(self):
         """false_negative_rate is false_negatives/evaluated."""
         from compare_models import ModelResult
-        r = ModelResult(model_type="fastai", total=10, false_negatives=1, skipped=0)
+        r = ModelResult(model_type="podsai", total=10, false_negatives=1, skipped=0)
         assert abs(r.false_negative_rate - 0.1) < 1e-9
 
     def test_avg_predict_time_none_when_no_times(self):
         """avg_predict_time is None when predict_times is empty."""
         from compare_models import ModelResult
-        r = ModelResult(model_type="fastai", total=5, skipped=5)
+        r = ModelResult(model_type="podsai", total=5, skipped=5)
         assert r.avg_predict_time is None
 
     def test_avg_predict_time_calculates_mean(self):
         """avg_predict_time is the mean of predict_times."""
         from compare_models import ModelResult
-        r = ModelResult(model_type="fastai", total=3, predict_times=[1.0, 2.0, 3.0])
+        r = ModelResult(model_type="podsai", total=3, predict_times=[1.0, 2.0, 3.0])
         assert abs(r.avg_predict_time - 2.0) < 1e-9
 
     def test_whale_f1_none_when_no_whale_labels_present(self):
         """whale_f1 is None when the confusion matrix includes no whale classes."""
         from compare_models import ModelResult
         r = ModelResult(
-            model_type="fastai",
+            model_type="podsai",
             confusion_matrix={"human": {"other": 2}, "water": {"other": 1}},
         )
         assert r.whale_f1 is None
@@ -495,7 +494,7 @@ class TestModelResultProperties:
         """Per-label FN% is normalized by the number of actual samples of that label."""
         from compare_models import ModelResult
         r = ModelResult(
-            model_type="fastai",
+            model_type="podsai",
             total=4,
             confusion_matrix={
                 "transient": {"other": 2},
@@ -549,7 +548,7 @@ class TestEvaluateModel:
 
         mock_result = {"global_prediction_label": "resident", "global_confidence": 0.8, "predict_time": 1.5}
         with patch("compare_models.run_inference", return_value=mock_result):
-            result = evaluate_model("fastai", "./model", wav_files, wav_dir)
+            result = evaluate_model("podsai", "./model", wav_files, wav_dir)
 
         assert result.correct == 1
         assert result.false_positives == 0
@@ -557,7 +556,7 @@ class TestEvaluateModel:
         assert result.skipped == 0
 
     def test_false_positive_counted(self, tmp_path):
-        """A non-resident sample predicted as "resident" (fastai) counts as false positive."""
+        """A non-resident sample predicted as "resident" (podsai) counts as false positive."""
         from compare_models import evaluate_model
 
         wav_dir = tmp_path / "testing-wav"
@@ -565,14 +564,14 @@ class TestEvaluateModel:
 
         mock_result = {"global_prediction_label": "resident", "global_confidence": 0.7, "predict_time": 1.2}
         with patch("compare_models.run_inference", return_value=mock_result):
-            result = evaluate_model("fastai", "./model", wav_files, wav_dir)
+            result = evaluate_model("podsai", "./model", wav_files, wav_dir)
 
         assert result.correct == 0
         assert result.false_positives == 1
         assert result.false_negatives == 0
 
 
-    def test_fastai_other_prediction_correct_for_non_resident(self, tmp_path):
+    def test_orcahello_other_prediction_correct_for_non_resident(self, tmp_path):
         """Binary models still count non-resident predicted as non-resident as correct."""
         from compare_models import evaluate_model
 
@@ -581,14 +580,14 @@ class TestEvaluateModel:
 
         mock_result = {"global_prediction_label": "other", "global_confidence": 0.7, "predict_time": 1.2}
         with patch("compare_models.run_inference", return_value=mock_result):
-            result = evaluate_model("fastai", "./model", wav_files, wav_dir)
+            result = evaluate_model("orcahello", "./model", wav_files, wav_dir)
 
         assert result.correct == 1
         assert result.false_positives == 0
         assert result.false_negatives == 0
 
     def test_false_negative_counted(self, tmp_path):
-        """A resident sample predicted as "other" (fastai) counts as false negative."""
+        """A resident sample predicted as "other" (orcahello) counts as false negative."""
         from compare_models import evaluate_model
 
         wav_dir = tmp_path / "testing-wav"
@@ -596,7 +595,7 @@ class TestEvaluateModel:
 
         mock_result = {"global_prediction_label": "other", "global_confidence": 0.1, "predict_time": 1.0}
         with patch("compare_models.run_inference", return_value=mock_result):
-            result = evaluate_model("fastai", "./model", wav_files, wav_dir)
+            result = evaluate_model("orcahello", "./model", wav_files, wav_dir)
 
         assert result.correct == 0
         assert result.false_positives == 0
@@ -611,7 +610,7 @@ class TestEvaluateModel:
         wav_files = _make_wav(wav_dir, "resident", "rpi_orcasound_lab", "2023_08_18_00_59_53_PST")
 
         with patch("compare_models.run_inference", side_effect=RuntimeError("model error")):
-            result = evaluate_model("fastai", "./model", wav_files, wav_dir)
+            result = evaluate_model("podsai", "./model", wav_files, wav_dir)
 
         assert result.skipped == 1
         assert result.correct == 0
@@ -684,7 +683,7 @@ class TestEvaluateModel:
 
         mock_result = {"global_prediction_label": "resident", "global_confidence": 0.8, "predict_time": 2.5}
         with patch("compare_models.run_inference", return_value=mock_result):
-            result = evaluate_model("fastai", "./model", wav_files, wav_dir)
+            result = evaluate_model("podsai", "./model", wav_files, wav_dir)
 
         assert len(result.predict_times) == 1
         assert abs(result.predict_times[0] - 2.5) < 1e-9
@@ -700,7 +699,7 @@ class TestPrintSummary:
     def test_prints_header_and_separator(self, capsys):
         """print_summary prints the "Model Comparison Summary" header."""
         from compare_models import ModelResult, print_summary
-        results = [ModelResult(model_type="fastai", total=5, correct=4, skipped=0)]
+        results = [ModelResult(model_type="podsai", total=5, correct=4, skipped=0)]
         print_summary(results)
         captured = capsys.readouterr().out
         assert "Model Comparison Summary" in captured
@@ -716,7 +715,7 @@ class TestPrintSummary:
     def test_prints_accuracy_percentage(self, capsys):
         """print_summary shows accuracy as a percentage."""
         from compare_models import ModelResult, print_summary
-        results = [ModelResult(model_type="fastai", total=10, correct=8, skipped=0)]
+        results = [ModelResult(model_type="podsai", total=10, correct=8, skipped=0)]
         print_summary(results)
         captured = capsys.readouterr().out
         assert "80.0%" in captured
@@ -724,7 +723,7 @@ class TestPrintSummary:
     def test_prints_na_when_no_evaluated_samples(self, capsys):
         """print_summary shows N/A for accuracy when all samples are skipped."""
         from compare_models import ModelResult, print_summary
-        results = [ModelResult(model_type="fastai", total=5, skipped=5)]
+        results = [ModelResult(model_type="podsai", total=5, skipped=5)]
         print_summary(results)
         captured = capsys.readouterr().out
         assert "N/A" in captured
@@ -732,7 +731,7 @@ class TestPrintSummary:
     def test_prints_skipped_count_when_nonzero(self, capsys):
         """print_summary shows the skipped count when some samples were skipped."""
         from compare_models import ModelResult, print_summary
-        results = [ModelResult(model_type="fastai", total=10, correct=5, skipped=3)]
+        results = [ModelResult(model_type="podsai", total=10, correct=5, skipped=3)]
         print_summary(results)
         captured = capsys.readouterr().out
         assert "3 skipped" in captured
@@ -740,7 +739,7 @@ class TestPrintSummary:
     def test_prints_definitions(self, capsys):
         """print_summary includes the definitions block."""
         from compare_models import ModelResult, print_summary
-        results = [ModelResult(model_type="fastai", total=5, correct=4, skipped=0)]
+        results = [ModelResult(model_type="podsai", total=5, correct=4, skipped=0)]
         print_summary(results)
         captured = capsys.readouterr().out
         assert "Definitions:" in captured
@@ -751,7 +750,7 @@ class TestPrintSummary:
     def test_prints_avg_time(self, capsys):
         """print_summary includes average time column."""
         from compare_models import ModelResult, print_summary
-        results = [ModelResult(model_type="fastai", total=5, correct=4, skipped=0, predict_times=[1.5, 2.0, 1.8, 2.2, 1.7])]
+        results = [ModelResult(model_type="podsai", total=5, correct=4, skipped=0, predict_times=[1.5, 2.0, 1.8, 2.2, 1.7])]
         print_summary(results)
         captured = capsys.readouterr().out
         assert "Avg Time" in captured
@@ -779,7 +778,7 @@ class TestPrintSummary:
     def test_prints_per_whale_fp_fn_rate_columns(self, capsys):
         """print_summary includes resident, transient, and humpback FP%/FN% columns without counts."""
         from compare_models import ModelResult, print_summary
-        results = [ModelResult(model_type="fastai", total=1, correct=1, confusion_matrix={"resident": {"resident": 1}})]
+        results = [ModelResult(model_type="podsai", total=1, correct=1, confusion_matrix={"resident": {"resident": 1}})]
         print_summary(results)
         captured = capsys.readouterr().out
         for header in ("RFP%", "RFN%", "TFP%", "TFN%", "HFP%", "HFN%"):
@@ -788,10 +787,10 @@ class TestPrintSummary:
             assert header not in captured
 
     def test_binary_model_non_resident_whale_rates_match_expected_summary(self, capsys):
-        """fastai/orcahello show 0% FP and 100% FN rates for transient/humpback when present."""
+        """orcahello shows 0% FP and 100% FN rates for transient/humpback when present."""
         from compare_models import ModelResult, print_summary
         result = ModelResult(
-            model_type="fastai",
+            model_type="orcahello",
             total=4,
             correct=1,
             confusion_matrix={
@@ -803,8 +802,8 @@ class TestPrintSummary:
         )
         print_summary([result])
         captured = capsys.readouterr().out
-        fastai_line = next(line for line in captured.splitlines() if line.strip().startswith("fastai"))
-        columns = fastai_line.split()
+        orcahello_line = next(line for line in captured.splitlines() if line.strip().startswith("orcahello"))
+        columns = orcahello_line.split()
         assert columns[7:9] == ["0.0%", "100.0%"]
         assert columns[9:11] == ["0.0%", "100.0%"]
 
@@ -831,7 +830,7 @@ class TestMainCLI:
         test_args = [
             "compare_models.py",
             "--wav-dir", str(tmp_path / "nonexistent-wav-dir"),
-            "--models", "fastai",
+            "--models", "podsai",
         ]
         with patch.object(sys, "argv", test_args):
             result = main()
@@ -869,7 +868,7 @@ class TestMainCLI:
         assert result == 1
 
     @pytest.mark.parametrize(
-        "model", ["fastai", "orcahello", "wav2vec2", "oldpodsai", "podsai", "custom"]
+        "model", ["orcahello", "oldpodsai", "podsai", "custom"]
     )
     def test_returns_1_for_duplicate_model(self, tmp_path, capsys, model):
         """main() rejects duplicate model names with a model-specific error."""
@@ -932,7 +931,7 @@ class TestMainCLI:
         test_args = [
             "compare_models.py",
             "--wav-dir", str(wav_dir),
-            "--models", "fastai",
+            "--models", "podsai",
             "--custom-model-path", "org/model",
         ]
         custom_model = type("Model", (), {"predict": lambda self, _: {}})()
@@ -1018,7 +1017,7 @@ class TestMainCLI:
         assert "[podsai]" not in captured.out
 
     def test_default_models_include_oldpodsai(self, tmp_path):
-        """main() defaults to evaluating fastai, orcahello, wav2vec2, oldpodsai, and podsai."""
+        """main() defaults to evaluating orcahello, oldpodsai, and podsai."""
         from compare_models import ModelResult, main
 
         rows = _make_testing_rows()
@@ -1040,10 +1039,10 @@ class TestMainCLI:
                     result = main()
 
         assert result == 0
-        assert mock_evaluate.call_count == 5
-        # Order matches default models: fastai, orcahello, wav2vec2, oldpodsai, podsai.
+        assert mock_evaluate.call_count == 3
+        # Order matches default models: orcahello, oldpodsai, podsai.
         called_revisions = [call.kwargs["model_revision"] for call in mock_evaluate.call_args_list]
-        assert called_revisions == [None, None, PODSAI_WAV2VEC2_MODEL_REVISION, PREVIOUS_PODSAI_MODEL_REVISION, LATEST_PODSAI_MODEL_REVISION]
+        assert called_revisions == [None, PREVIOUS_PODSAI_MODEL_REVISION, LATEST_PODSAI_MODEL_REVISION]
 
     def test_reuses_preloaded_model_for_each_sample(self, tmp_path):
         """main() preloads one model per type and reuses it for all samples."""
@@ -1058,7 +1057,7 @@ class TestMainCLI:
         test_args = [
             "compare_models.py",
             "--wav-dir", str(wav_dir),
-            "--models", "fastai",
+            "--models", "podsai",
             "--max-samples", "2",
         ]
         with patch.object(sys, "argv", test_args):
@@ -1074,8 +1073,8 @@ class TestMainCLI:
             for call in mock_infer.call_args_list
         )
 
-    def test_returns_0_on_success_with_fastai(self, tmp_path):
-        """main() returns 0 when it successfully evaluates fastai on test samples."""
+    def test_returns_0_on_success_with_podsai(self, tmp_path):
+        """main() returns 0 when it successfully evaluates podsai on test samples."""
         from compare_models import main
 
         rows = _make_testing_rows()
@@ -1086,8 +1085,8 @@ class TestMainCLI:
         test_args = [
             "compare_models.py",
             "--wav-dir", str(wav_dir),
-            "--models", "fastai",
-            "--fastai-model-path", "./model",
+            "--models", "podsai",
+            "--podsai-model-path", "./model",
         ]
         with patch.object(sys, "argv", test_args):
             with patch("compare_models.get_model_inference", return_value=object()):
@@ -1104,7 +1103,7 @@ class TestMainCLI:
         test_args = [
             "compare_models.py",
             "--wav-dir", str(wav_dir),
-            "--models", "fastai",
+            "--models", "podsai",
         ]
         with patch.object(sys, "argv", test_args):
             result = main()
@@ -1122,7 +1121,7 @@ class TestMainCLI:
         test_args = [
             "compare_models.py",
             "--wav-dir", str(wav_dir),
-            "--models", "fastai",
+            "--models", "podsai",
             "--max-samples", "2",
         ]
         with patch.object(sys, "argv", test_args):
@@ -1142,7 +1141,7 @@ class TestMainCLI:
         test_args = [
             "compare_models.py",
             "--wav-dir", str(wav_dir),
-            "--models", "fastai",
+            "--models", "podsai",
             "--max-samples", "0",
         ]
         with patch.object(sys, "argv", test_args):
@@ -1162,8 +1161,8 @@ class TestMainCLI:
         test_args = [
             "compare_models.py",
             "--wav-dir", str(wav_dir),
-            "--models", "fastai",
-            "--fastai-model-path", "./model",
+            "--models", "podsai",
+            "--podsai-model-path", "./model",
             "--category", "resident",
         ]
         with patch.object(sys, "argv", test_args):
@@ -1183,7 +1182,7 @@ class TestMainCLI:
         test_args = [
             "compare_models.py",
             "--wav-dir", str(wav_dir),
-            "--models", "fastai",
+            "--models", "podstai",
             "--category", "transient",
         ]
         with patch.object(sys, "argv", test_args):
@@ -1254,7 +1253,7 @@ class TestConfusionMatrix:
 
         with patch("compare_models.run_inference") as mock_infer:
             mock_infer.side_effect = FileNotFoundError("missing wav")
-            result = evaluate_model("fastai", "./model", [wav_file], wav_dir)
+            result = evaluate_model("podsai", "./model", [wav_file], wav_dir)
 
         assert result.skipped == 1
         assert result.confusion_matrix == {}
@@ -1283,7 +1282,7 @@ class TestConfusionMatrix:
         """print_confusion_matrix does nothing when confusion_matrix is empty."""
         from compare_models import ModelResult, print_confusion_matrix
 
-        result = ModelResult(model_type="fastai")
+        result = ModelResult(model_type="podsai")
         print_confusion_matrix(result)
         captured = capsys.readouterr().out
         assert captured == ""
@@ -1311,7 +1310,7 @@ class TestConfusionMatrix:
         from compare_models import ModelResult, print_confusion_matrix
 
         result = ModelResult(
-            model_type="fastai",
+            model_type="orcahello",
             confusion_matrix={
                 "resident": {"resident": 7, "other": 2},
                 "other": {"resident": 1, "other": 9},
@@ -1330,7 +1329,7 @@ class TestConfusionMatrix:
         from compare_models import ModelResult, print_confusion_matrix
 
         result = ModelResult(
-            model_type="fastai",
+            model_type="orcahello",
             confusion_matrix={
                 "resident": {"resident": 7, "other": 2},
                 "other": {"resident": 1, "other": 9},
@@ -1371,7 +1370,7 @@ class TestConfusionMatrix:
         from compare_models import ModelResult, print_confusion_matrix
 
         result = ModelResult(
-            model_type="fastai",
+            model_type="orcahello",
             confusion_matrix={
                 "resident": {"other": 9, "resident": 1},
                 "other": {},
@@ -1391,7 +1390,7 @@ class TestConfusionMatrix:
         from compare_models import ModelResult, print_confusion_matrix
 
         result = ModelResult(
-            model_type="fastai",
+            model_type="orcahello",
             confusion_matrix={
                 "human": {"other": 1, "resident": 1},
                 "resident": {"other": 9, "resident": 1},
@@ -1410,7 +1409,7 @@ class TestConfusionMatrix:
 
         results = [
             ModelResult(
-                model_type="fastai",
+                model_type="orcahello",
                 total=2,
                 correct=2,
                 confusion_matrix={"resident": {"resident": 2}},
@@ -1419,5 +1418,5 @@ class TestConfusionMatrix:
         print_summary(results)
         captured = capsys.readouterr().out
 
-        assert "Confusion Matrix for fastai" in captured
+        assert "Confusion Matrix for orcahello" in captured
         assert "resident" in captured

@@ -7,15 +7,15 @@ Compare multiple models on a test set of audio samples.
 Usage:
     python compare_models.py [options]
 
-Loads a test set from WAV files under output/testing-wav, then runs each enabled model
-(fastai, orcahello, wav2vec2 (old PODS-AI with Wav2Vec2)), oldpodsai or podsai (AST) on the corresponding
-60-second WAV files and reports correct identifications, whale-class F1, and
-per-whale-class false-positive/false-negative rates per model.
+Loads a test set from WAV files under output/testing-wav, then runs each enabled model (orcahello, oldpodsai, or podsai) 
+on the corresponding 60-second WAV files.
+
+Reports correct identifications, whale-class F1, and per-whale-class false-positive/false-negative rates per model.
 
 A "correct" identification means:
-  - For fastai and orcahello, model predicted "resident" (SRKW) when the label is
+  - For orcahello, model predicted "resident" (SRKW) when the label is
     "resident", or anything other than "resident" when the label is not "resident".
-  - For custom, podsai, oldpodsai, and wav2vec2, the actual category is present in the model's
+  - For custom, podsai, and oldpodsai, the actual category is present in the model's
     multi-label prediction set (with a single-label fallback for older models).
     Abiotic samples also accept water, vessel, or jingle predictions.
 
@@ -33,8 +33,8 @@ from typing import Any, Optional
 from model_inference import get_model_inference
 from model_revisions import (
     LATEST_PODSAI_MODEL_REVISION,
-    PODSAI_WAV2VEC2_MODEL_REVISION,
     PREVIOUS_PODSAI_MODEL_REVISION,
+    PODSAI_WAV2VEC2_MODEL_REVISION,
 )
 from run_inference import run_inference
 
@@ -52,17 +52,15 @@ SUMMARY_LABELS = [
 MATRIX_CELL_PADDING = 2
 PODSAI_MODEL_ID = "davethaler/whale-call-detector"
 
-# Maps user-facing model names to inference backends. wav2vec2 and oldpodsai reuse podsai
+# Maps user-facing model names to inference backends. oldpodsai reuses podsai
 # inference with a different pinned model revision.
 MODEL_TYPE_TO_INFERENCE_TYPE = {
-    "fastai": "fastai",
     "orcahello": "orcahello",
-    "wav2vec2": "podsai",
     "oldpodsai": "podsai",
     "podsai": "podsai",
 }
 CUSTOM_MODEL_TYPE = "podsai"
-DEFAULT_MODELS = "fastai,orcahello,wav2vec2,oldpodsai,podsai"
+DEFAULT_MODELS = "orcahello,oldpodsai,podsai"
 MODEL_LOAD_ERRORS = (
     AttributeError,
     EOFError,
@@ -264,7 +262,7 @@ def load_test_samples(wav_dir: Path, max_samples: Optional[int] = None,
 
 def is_exact_match_model(model_type: str) -> bool:
     """Return whether a model uses exact category membership for correctness."""
-    return model_type in {"custom", "podsai", "oldpodsai", "wav2vec2"}
+    return model_type in {"custom", "podsai", "oldpodsai"}
 
 
 def parse_model_spec(spec: str) -> tuple[str, str, Optional[str]]:
@@ -422,9 +420,8 @@ def evaluate_model(
     Run a model against all test samples and accumulate results.
 
     Args:
-        model_type: One of 'fastai', 'orcahello', 'wav2vec2', 'oldpodsai', 'podsai', or
-                    'custom'. 'oldpodsai', 'wav2vec2', and 'custom' are mapped to
-                    'podsai' inference internally.
+        model_type: One of 'orcahello', 'oldpodsai', 'podsai', or 'custom'. 
+                    'oldpodsai' and 'custom' are mapped to 'podsai' inference internally.
         model_path: Path to the model (or HuggingFace Hub model ID).
         wav_paths: List of WAV file paths.
         wav_dir: Root directory containing testing WAV files.
@@ -602,7 +599,7 @@ def print_summary(results: list[ModelResult]) -> None:
     print()
     print("Definitions:")
     print("  Accuracy     = Correct / Evaluated")
-    print("  Correct      = fastai/orcahello: resident vs other; wav2vec2/oldpodsai/podsai/custom: category in prediction set")
+    print("  Correct      = orcahello: resident vs other; oldpodsai/podsai/custom: category in prediction set")
     print("                 abiotic also accepts water, vessel, or jingle")
     print("  F1           = macro F1 over humpback, resident, and transient classes that are present")
     print("  [R|T|H]FP%   = among non-[R|T|H] samples, fraction predicted as that class")
@@ -661,14 +658,6 @@ def main() -> int:
         ),
     )
     parser.add_argument(
-        "--fastai-model-path",
-        default="model",
-        help=(
-            "Path to FastAI model directory. "
-            "Defaults to model when not specified."
-        ),
-    )
-    parser.add_argument(
         "--orcahello-model-path",
         default="orcasound/orcahello-srkw-detector-v1",
         help=(
@@ -691,7 +680,7 @@ def main() -> int:
         default=PODSAI_MODEL_ID,
         help=(
             "Path to PODS-AI model directory, HuggingFace Hub ID, or PODS-AI-compatible ONNX file. "
-            "Used by wav2vec2 (Wav2Vec2), oldpodsai (AST), and podsai (AST). "
+            "Used by oldpodsai and podsai (AST). "
             f"Defaults to {PODSAI_MODEL_ID!r} when not specified."
         ),
     )
@@ -777,16 +766,12 @@ def main() -> int:
         return 1
 
     model_paths: dict[str, Optional[str]] = {
-        "fastai": args.fastai_model_path,
         "orcahello": args.orcahello_model_path,
-        "wav2vec2": args.podsai_model_path,
         "oldpodsai": args.podsai_model_path,
         "podsai": args.podsai_model_path,
     }
     model_revisions: dict[str, Optional[str]] = {
-        "fastai": None,
         "orcahello": args.orcahello_model_revision,
-        "wav2vec2": PODSAI_WAV2VEC2_MODEL_REVISION,
         "oldpodsai": PREVIOUS_PODSAI_MODEL_REVISION,
         "podsai": args.podsai_model_revision,
     }

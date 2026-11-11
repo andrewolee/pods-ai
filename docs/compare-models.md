@@ -20,13 +20,12 @@ python src/compare_models.py [options]
 | Option | Description |
 | --- | --- |
 | `--wav-dir PATH` | Root directory of category subdirectories. Default: `output/testing-wav`. |
-| `--models MODEL_LIST` | Comma-separated built-in names. Include `custom` to evaluate the custom PODS-AI model. Default: `fastai,orcahello,wav2vec2,oldpodsai,podsai`. |
+| `--models MODEL_LIST` | Comma-separated built-in names. Include `custom` to evaluate the custom PODS-AI model. Default: `orcahello,oldpodsai,podsai`. |
 | `--custom-model-path PATH_OR_HF_ID` | Local custom model file/directory, PODS-AI-compatible ONNX file, or Hugging Face repository ID. Required when `custom` is in `--models`; supplying it without `custom` adds `custom` automatically. |
 | `--custom-model-revision REVISION` | Optional revision for a custom Hugging Face model. Ignored for local paths. |
-| `--fastai-model-path PATH` | FastAI model directory. Default: `model`. |
 | `--orcahello-model-path PATH_OR_HF_ID` | OrcaHello model path, PODS-AI-compatible ONNX file, or Hub ID. Default: `orcasound/orcahello-srkw-detector-v1`. |
 | `--orcahello-model-revision REVISION` | Optional Hugging Face revision for OrcaHello. Used only when `--orcahello-model-path` is a Hub ID. |
-| `--podsai-model-path PATH_OR_HF_ID` | PODS-AI model path, ONNX file, or Hub ID for `wav2vec2`, `oldpodsai`, and `podsai`. Default: `davethaler/whale-call-detector`. |
+| `--podsai-model-path PATH_OR_HF_ID` | PODS-AI model path, ONNX file, or Hub ID for `oldpodsai` and `podsai`. Default: `davethaler/whale-call-detector`. |
 | `--podsai-model-revision REVISION` | Revision for the built-in `podsai` model. |
 | `--max-samples N` | Evaluate at most `N` WAV files. `N` must be positive. |
 | `--category NAME` | Evaluate only the named category. |
@@ -35,9 +34,7 @@ Built-in model names map to these inference backends:
 
 | Name | Backend | Revision behavior |
 | --- | --- | --- |
-| `fastai` | FastAI | No revision |
 | `orcahello` | OrcaHello | `--orcahello-model-revision` |
-| `wav2vec2` | PODS-AI | Pinned Wav2Vec2 revision |
 | `oldpodsai` | PODS-AI | Pinned previous revision |
 | `podsai` | PODS-AI | `--podsai-model-revision` |
 
@@ -64,7 +61,7 @@ python src/compare_models.py --models podsai,custom --custom-model-path podsai.o
 ```
 
 Custom models are PODS-AI-compatible multi-class models. They use the same
-category-membership evaluation as `wav2vec2`, `oldpodsai`, and `podsai`,
+category-membership evaluation as `oldpodsai` and `podsai`,
 including the confusion matrix, F1, and FP/FN calculations.
 
 ### Inference contract
@@ -110,9 +107,9 @@ not printed by the CLI.
 
 ## Evaluation definitions
 
-- `fastai` and `orcahello` are binary resident-versus-other models. A sample
+- `orcahello` is binary resident-versus-other models. A sample
   is correct when resident status matches the expected category.
-- `wav2vec2`, `oldpodsai`, `podsai`, and `custom` use the expected category's
+- `oldpodsai`, `podsai`, and `custom` use the expected category's
   membership in `global_prediction_labels`; older output falls back to
   `global_prediction_label`.
 - For an `abiotic` sample, `water`, `vessel`, and `jingle` predictions also
@@ -133,10 +130,10 @@ Evaluate the built-in models on all available samples:
 python src/compare_models.py
 ```
 
-Evaluate a local custom model alongside FastAI:
+Evaluate a local custom model:
 
 ```bash
-python src/compare_models.py --models fastai,custom --custom-model-path ./models/my-detector
+python src/compare_models.py --models custom --custom-model-path ./models/my-detector
 ```
 
 Evaluate a Hugging Face custom model with a pinned revision:
