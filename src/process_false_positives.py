@@ -56,7 +56,7 @@ HUMAN_TERMS = ("human", "radio")
 VESSEL_TERMS = ("vessel", "ship", "boat", "train")
 OTHER_TERMS = ("seal","sea lion")
 # "hum"/"electric" use word-boundary regexes, not plain substring checks,
-# since "humpback"/"human"/"electrician" would otherwise falsely match.
+# since "humpback"/"human" would otherwise falsely match.
 HUM_TERMS = ("60hz", "60 hz", "60-hz")
 HUM_WORD_PATTERN = re.compile(r"\b(?:hum(?:s|ming|med)?|electric(?:al|ity|ally)?)\b")
 NO_HUM_PATTERN = re.compile(
@@ -67,8 +67,7 @@ NO_HUM_PATTERN = re.compile(
 WHALE_CLASSES = {"resident", "transient", "humpback"}
 NEGATIVE_CLASSES = {"jingle", "bird"}
 BACKGROUND_CLASSES = {"vessel", "human", "water", "other", "hum"}
-# Older tag used before moderators standardized on "hum".
-HUM_TAG_ALIASES = {"60hz", "60 hz", "60-hz"}
+TAG_ALIASES = {"60hz": "hum", "60 hz": "hum", "60-hz": "hum", "ship": "vessel"}
 # Phrases that negate "humpback" or "vessel" labels (e.g. human-written "No humpback nor vessel").
 NO_HUMPBACK_TERMS = ("no humpback", "not humpback")
 NO_VESSEL_TERMS = ("no vessel", "nor vessel", "no boat", "nor boat", "no ship", "nor ship", "no train", "nor train")
@@ -90,7 +89,7 @@ def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
     if tags:
         normalized_tags = [tag.strip().lower() for tag in tags.split(";")]
         normalized_tags = [
-            "hum" if tag in HUM_TAG_ALIASES else tag for tag in normalized_tags
+            TAG_ALIASES.get(tag, tag) for tag in normalized_tags
         ]
 
         # Priority order regardless of tag position: see constants above.

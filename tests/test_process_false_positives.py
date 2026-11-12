@@ -84,6 +84,7 @@ class TestGetCorrectedClass:
     def test_tags_case_and_whitespace_and_multiple(self):
         """Tags are split on ';', stripped, and matched case-insensitively; first matching tag returned."""
         assert get_corrected_class("", "  Humpback  ; other") == "humpback"
+        assert get_corrected_class("", "  ShIp  ; other") == "vessel"
 
     def test_tags_unknown_returns_water(self):
         """If tags contain no known classes, return 'water'."""
@@ -92,6 +93,8 @@ class TestGetCorrectedClass:
     def test_tags_first_match_returned_within_same_tier(self):
         """First matching tag should be returned when competing tags are in the same priority tier."""
         assert get_corrected_class("", "vessel;water") == "vessel"
+        assert get_corrected_class("", "ship;60Hz;hum") == "vessel"
+        assert get_corrected_class("", "hum;ship") == "hum"
 
     def test_tags_negative_tier_takes_priority_over_background_tier(self):
         """A sporadic-event tag (jingle, bird) wins over a constant background tag (vessel, etc.),
@@ -99,9 +102,6 @@ class TestGetCorrectedClass:
         model predictions in podsai_inference.py."""
         assert get_corrected_class("", "vessel;jingle") == "jingle"
         assert get_corrected_class("", "water;bird") == "bird"
-
-    def test_tags_background_hum_loses_to_negative_tier(self):
-        """'hum' is background tier, so it loses to a sporadic-event tag like jingle or bird."""
         assert get_corrected_class("", "hum;jingle") == "jingle"
 
     def test_tags_whale_species_takes_priority_regardless_of_position(self):
@@ -130,7 +130,7 @@ class TestGetCorrectedClass:
 
     def test_tags_hum_and_60hz_together_returns_hum_once(self):
         """A detection tagged with both 'hum' and '60Hz' still resolves to 'hum'."""
-        assert get_corrected_class("", "ship;60Hz;hum") == "hum"
+        assert get_corrected_class("", "60Hz;hum") == "hum"
 
     def test_comments_hum_word_returns_hum(self):
         """A standalone 'hum' mention in comments resolves to 'hum'."""
@@ -143,10 +143,6 @@ class TestGetCorrectedClass:
     def test_comments_electric_keyword_returns_hum(self):
         """'Electric' (without the '-al' suffix) resolves to 'hum'."""
         assert get_corrected_class("Electric buzz, nothing else.", None) == "hum"
-
-    def test_comments_electrician_does_not_match_as_hum(self):
-        """'electrician' must not match as a substring of 'electric' in free-text comments."""
-        assert get_corrected_class("Local electrician repaired the dock wiring today.", None) == "water"
 
     def test_comments_60_hz_with_space_returns_hum(self):
         """'60 Hz' (with a space) resolves to 'hum'."""

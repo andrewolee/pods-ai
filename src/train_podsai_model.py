@@ -169,7 +169,7 @@ def can_stratify_split(num_unique_labels: int, min_samples_per_label: int, estim
         estimated_test_size: Expected number of samples in the test split.
 
     Returns:
-        True if stratification is possible, i.e. there are at least 2 unique
+        True if stratification is possible, i.e., there are at least 2 unique
         labels, each label has at least 2 samples, and the test split itself
         is large enough to hold at least one sample per label.  A category
         with few samples, or many classes relative to dataset size, can leave
@@ -212,6 +212,8 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
         print(f"Found {len(wav_files)} files for {category}")
 
         for wav_file in wav_files:
+            audio_files.append(str(wav_file))
+
             # Map labels based on num_classes.
             if num_classes == 2:
                 # Binary: map resident/transient/humpback to "whale" (1), everything else to "other" (0).
@@ -220,7 +222,6 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
                 # Multi-class: use original category.
                 label = LABEL2ID[category]
 
-            audio_files.append(str(wav_file))
             labels.append(label)
 
     # Validate that dataset is not empty.
@@ -260,7 +261,7 @@ def load_audio_dataset(data_dir: Path, num_classes: int) -> DatasetDict:
     )
 
     if can_stratify:
-        # Fall back if the split still raises (e.g. a rounding edge case).
+        # Fall back if the split still raises (e.g., a rounding edge case).
         try:
             print("Using stratified train/test split (80/20)")
             dataset = dataset.train_test_split(
