@@ -32,9 +32,9 @@ from add_samples import (
 )
 from audio_utils import (
     download_60s_audio,
-    format_timestamp_pst,
+    format_timestamp_pacific,
     get_machine_detections,
-    parse_timestamp_pst,
+    parse_timestamp_pacific,
 )
 from manual_samples_utils import (
     CSV_FIELDNAMES,
@@ -135,13 +135,13 @@ def process_false_negatives(
                 continue
 
             summary["confirmed"] += 1
-            timestamp_str = format_timestamp_pst(
+            timestamp_str = format_timestamp_pacific(
                 detection.timestamp - timedelta(seconds=AUDIO_OFFSET_SECONDS)
             )
             print(f"Checking confirmed SRKW detection at {timestamp_str} by model {model_id}")
 
             with TemporaryDirectory() as temp_dir:
-                min_end_timestamp_pst_str = format_timestamp_pst(detection.timestamp + timedelta(seconds=60))
+                min_end_timestamp_pst_str = format_timestamp_pacific(detection.timestamp + timedelta(seconds=60))
                 wav_path = download_60s_audio(node_name=feed.node_name, min_end_timestamp_pst_str=min_end_timestamp_pst_str, tmp_dir=temp_dir)
                 if wav_path is None:
                     print(f"Skipping {feed.node_name} {timestamp_str}: failed to download audio.")
@@ -367,8 +367,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    start_time = parse_timestamp_pst(args.start) if args.start else None
-    end_time = None if (args.end or "").lower() == "now" else parse_timestamp_pst(args.end)
+    start_time = parse_timestamp_pacific(args.start) if args.start else None
+    end_time = None if (args.end or "").lower() == "now" else parse_timestamp_pacific(args.end)
     result_set = args.set.lower()
     if result_set not in ("training", "testing"):
         print(f"Invalid set value: {args.set}. Must be 'training' or 'testing'.")

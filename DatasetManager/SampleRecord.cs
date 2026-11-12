@@ -1,7 +1,7 @@
 ﻿// Copyright (c) PODS-AI contributors
 // SPDX-License-Identifier: MIT
 
-using CsvHelper.Configuration.Attributes;
+using CsvHelper;
 using System.ComponentModel;
 using System.Globalization;
 using System.Net;
@@ -9,7 +9,8 @@ using System.Runtime.CompilerServices;
 
 namespace DatasetManager
 {
-    public class SampleRecord : INotifyPropertyChanged
+    [CsvRecord]
+    public partial class SampleRecord : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
         public string Category { get; set; } = "";
@@ -17,7 +18,7 @@ namespace DatasetManager
         public string StartTimestamp { get; set; } = "";
         public string URI { get; set; } = "";
 
-        [Ignore]
+        [CsvIgnore]
         public DateTime StartTimestampUtc
         {
             get
@@ -50,7 +51,7 @@ namespace DatasetManager
             }
         }
         public string Description { get; set; } = "";
-        [Name("Notes")]
+        [CsvColumn("Notes")]
         public string Source { get; set; } = "";
         private decimal? _confidence = null;
         public decimal? Confidence {
@@ -69,7 +70,7 @@ namespace DatasetManager
             }
         }
         private double? _inferredConfidence = null;
-        [Ignore]
+        [CsvIgnore]
         public double? InferredConfidence
         {
             get => _inferredConfidence;
@@ -87,9 +88,9 @@ namespace DatasetManager
             }
         }
 
-        [Ignore]
+        [CsvIgnore]
         public double? ConfidenceRatio => Confidence == null ? null : ((double)Confidence) / 100.0;
-        [Ignore]
+        [CsvIgnore]
         public double? InferredConfidenceRatio => InferredConfidence == null ? null : InferredConfidence / 100.0;
         private string _moderatedTags = "";
 
@@ -97,8 +98,7 @@ namespace DatasetManager
         /// Gets or sets the moderated tags for the sample. This property
         /// is optional and can be empty.
         /// </summary>
-        [Optional]
-        [Name("Tags")]
+        [CsvColumn("Tags", Optional = true)]
         public string ModeratedTags
         {
             get => _moderatedTags;
@@ -121,7 +121,7 @@ namespace DatasetManager
         /// Gets or sets the tags for the sample inferred by the current PODS-AI model.
         /// This property is ignored during CSV serialization.
         /// </summary>
-        [Ignore]
+        [CsvIgnore]
         public string InferredTags
         {
             get => _inferredTags;
@@ -142,7 +142,7 @@ namespace DatasetManager
         /// <summary>
         /// Gets a value indicating whether the sample has inferred tags.
         /// </summary>
-        [Ignore]
+        [CsvIgnore]
         public bool HasInferredTags => !string.IsNullOrWhiteSpace(InferredTags);
 
         /// <summary>

@@ -7,8 +7,11 @@ Run inference on a wav file and output per-class probabilities.
 Usage:
     python run_inference.py sample.wav
     python run_inference.py sample.wav --model podsai --model-path /path/to/podsai-model
+    python run_inference.py sample.wav --model-path podsai.onnx
     python run_inference.py sample.wav --model fastai --model-path ../model
     python run_inference.py --node-name rpi_sunset_bay --end-timestamp-str 2025_01_15_12_30_00_PST
+
+ONNX inference requires the optional dependencies in requirements-onnx.txt.
 """
 
 import argparse
@@ -26,16 +29,11 @@ from tempfile import TemporaryDirectory
 from typing import Any, Optional
 
 import ffmpeg
-
 from audio_utils import (
     format_utc_iso_z,
     download_audio_from_start_utc,
-    download_from_url,
-    get_cached_folders,
-    get_difference_between_times_in_seconds,
-    get_folders_between_timestamp,
-    load_m3u8_with_retry,
     PACIFIC_TZ,
+    parse_timestamp_pacific,
 )
 UTC_TZ = timezone.utc
 from model_inference import get_model_inference
@@ -48,12 +46,6 @@ from model_revisions import LATEST_PODSAI_MODEL_REVISION, PODSAI_WAV2VEC2_MODEL_
 PODSAI_MODEL_REVISION = LATEST_PODSAI_MODEL_REVISION
 PROPOSED_DESCRIPTION_EXTRA_CLASSES = {"vessel", "human", "jingle", "bird", "hum"}
 NEGATIVE_LABELS = {"abiotic", "other", "water", "vessel", "jingle", "human", "bird", "hum"}
-
-
-def parse_pst_end_timestamp(timestamp_str: str) -> datetime:
-    """Parse PST end timestamp format YYYY_MM_DD_HH_MM_SS_PST."""
-    dt = datetime.strptime(timestamp_str, "%Y_%m_%d_%H_%M_%S_PST")
-    return PACIFIC_TZ.localize(dt)
 
 
 def parse_utc_start_timestamp(timestamp_str: str) -> datetime:
@@ -485,8 +477,8 @@ def main() -> int:
         "--end-timestamp-str",
         default=None,
         help=(
-            "PST end timestamp used with --node-name to download audio "
-            "(format: YYYY_MM_DD_HH_MM_SS_PST)."
+            "Pacific end timestamp used with --node-name to download audio "
+            "(format: YYYY_MM_DD_HH_MM_SS_{TZ})."
         ),
     )
     parser.add_argument(
@@ -531,7 +523,7 @@ def main() -> int:
         "--model-path",
         default=None,
         help=(
-            "Path to model directory or HuggingFace Hub model ID. "
+            "Path to model directory, HuggingFace Hub model ID, or PODS-AI ONNX file. "
             "Defaults to ./model for --model fastai. "
             "Defaults to orcasound/orcahello-srkw-detector-v1 for --model orcahello. "
             f"Defaults to {PODSAI_MODEL_ID!r} for --model podsai."
@@ -603,7 +595,7 @@ def main() -> int:
                 if args.start_timestamp_utc is not None:
                     start_time_utc = parse_utc_start_timestamp(args.start_timestamp_utc)
                 else:
-                    end_time_pst = parse_pst_end_timestamp(end_timestamp_str)
+                    end_time_pst = parse_timestamp_pacific(end_timestamp_str)
                     start_time_utc = end_time_pst.astimezone(UTC_TZ) - timedelta(seconds=duration_seconds)
                 wav_path = download_audio_from_start_utc(
                     args.node_name, start_time_utc, temp_dir, duration_seconds=duration_seconds

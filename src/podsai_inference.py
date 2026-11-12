@@ -101,8 +101,7 @@ class PodsAIInference(ModelInference):  # Inherit from ModelInference
     """
     Inference wrapper for PODS-AI audio classification models.
 
-    This class implements the interface expected by model_inference.py,
-    providing predictions in the format required by extract_training_samples.py.
+    This class implements the interface expected by model_inference.py.
     """
 
     def __init__(self, model_path: str, device: Optional[str] = None,
@@ -472,10 +471,6 @@ class PodsAIInference(ModelInference):  # Inherit from ModelInference
         the orcahello LiveInferenceOrchestrator behavior. Unlike FastAIModel which uses a
         1-second hop and produces per-second outputs, this implementation uses a configurable
         hop_duration (default 2 seconds) for efficiency.
-
-        The timestamp correction logic in extract_training_samples.py automatically adapts
-        by inferring hop_duration = audio_duration / len(local_confidences), so the different
-        output length is handled transparently.
 
         Args:
             wav_path: Path to wav file (typically 60 seconds long)

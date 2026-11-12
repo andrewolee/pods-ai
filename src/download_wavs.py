@@ -20,8 +20,9 @@ from pytz import timezone
 import requests
 
 from add_samples import get_orcasite_feeds
+from audio_utils import format_timestamp_pacific, parse_timestamp_pacific
 
-PACIFIC_TZ = timezone('US/Pacific')
+PACIFIC_TZ = timezone('America/Los_Angeles')
 N_SECONDS = 3  # Create 3-second wav files.
 TESTING_WINDOW_SECONDS = 60
 DEFAULT_DCLDE_MANIFEST = Path("output/csv/dclde_60s_samples.csv")
@@ -85,28 +86,6 @@ def parse_csv(csv_path: Path) -> List[CSVRow]:
                 ))
     return rows
 
-def parse_timestamp_pst(timestamp_str: str) -> datetime:
-    """
-    Parse a PST timestamp string in the format YYYY_MM_DD_HH_MM_SS_PST.
-
-    Parameters:
-        timestamp_str (str): Timestamp string (e.g., "2025_12_24_17_51_23_PST").
-
-    Returns:
-        datetime: Parsed datetime object with Pacific timezone.
-    """
-    # Remove _PST suffix if present.
-    timestamp_str = timestamp_str.replace('_PST', '')
-
-    # Parse the datetime.
-    dt_naive = datetime.strptime(timestamp_str, "%Y_%m_%d_%H_%M_%S")
-
-    # Localize to Pacific timezone.
-    dt_aware = PACIFIC_TZ.localize(dt_naive)
-
-    return dt_aware
-
-
 def add_seconds_to_timestamp_pst(timestamp_str: str, seconds: int) -> str:
     """
     Add seconds to a PST timestamp string and return the same formatted representation.
@@ -116,14 +95,14 @@ def add_seconds_to_timestamp_pst(timestamp_str: str, seconds: int) -> str:
         seconds (int): Number of seconds to add (or subtract if negative).
 
     Returns:
-        str: Adjusted timestamp in the format YYYY_MM_DD_HH_MM_SS_PST.
+        str: Adjusted timestamp in the format YYYY_MM_DD_HH_MM_SS_{TZ}.
     """
-    adjusted = parse_timestamp_pst(timestamp_str) + timedelta(seconds=seconds)
-    return adjusted.strftime("%Y_%m_%d_%H_%M_%S_PST")
+    adjusted = PACIFIC_TZ.normalize(parse_timestamp_pacific(timestamp_str) + timedelta(seconds=seconds))
+    return adjusted.strftime("%Y_%m_%d_%H_%M_%S_%Z")
 
 
 def _training_window(row: CSVRow) -> tuple[datetime, datetime]:
-    start = parse_timestamp_pst(row.timestamp_pst)
+    start = parse_timestamp_pacific(row.timestamp_pst)
     return start, start + timedelta(seconds=N_SECONDS)
 
 
@@ -134,13 +113,13 @@ def _testing_window(row: CSVRow) -> tuple[datetime, datetime]:
     detection timestamp, so the interval is simply the 60-second
     window starting at the row's timestamp.
     """
-    start = parse_timestamp_pst(row.timestamp_pst)
+    start = parse_timestamp_pacific(row.timestamp_pst)
     return start, start + timedelta(seconds=TESTING_WINDOW_SECONDS)
 
 
 def _dclde_window(row: CSVRow) -> tuple[datetime, datetime]:
     """Return the full-recording interval represented by a DCLDE row."""
-    start = parse_timestamp_pst(row.timestamp_pst)
+    start = parse_timestamp_pacific(row.timestamp_pst)
     return start, start + timedelta(seconds=TESTING_WINDOW_SECONDS)
 
 
@@ -338,18 +317,6 @@ def _normalize_text(value: str) -> str:
     return " ".join(value.split()).strip().lower()
 
 
-def _format_timestamp_pst(dt: datetime) -> str:
-    """Format a datetime using the repository's testing CSV timestamp convention.
-
-    Args:
-        dt: Timezone-aware datetime to format in the Pacific timezone.
-
-    Returns:
-        Timestamp string in ``YYYY_MM_DD_HH_MM_SS_PST`` format.
-    """
-    return dt.astimezone(PACIFIC_TZ).strftime("%Y_%m_%d_%H_%M_%S_PST")
-
-
 def _default_slug_from_node_name(node_name: str) -> str:
     """Derive the default Orcasound URI slug from a CSV node name."""
     return node_name.removeprefix("rpi_").replace("_", "-")
@@ -390,7 +357,7 @@ def _generate_testing_uri(row: CSVRow, timestamp_pst: str) -> str:
     else:
         node_slug = _default_slug_from_node_name(row.node_name)
         base_uri = f"https://live.orcasound.net/bouts/new/{node_slug}"
-    timestamp_utc = parse_timestamp_pst(timestamp_pst).astimezone(dt_timezone.utc)
+    timestamp_utc = parse_timestamp_pacific(timestamp_pst).astimezone(dt_timezone.utc)
     encoded_time = quote(timestamp_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z", safe="")
     return f"{base_uri}?time={encoded_time}"
 
@@ -597,7 +564,7 @@ def _find_matching_detection(row: CSVRow) -> tuple[dict, str]:
     Returns:
         Tuple of ``(detection, orcasite_timestamp_pst)`` for the matching 60-second detection.
     """
-    row_timestamp = parse_timestamp_pst(row.timestamp_pst)
+    row_timestamp = parse_timestamp_pacific(row.timestamp_pst)
     normalized_description = _normalize_text(row.description)
     search_windows = (1, 7)
     last_candidate_count = 0
@@ -638,7 +605,7 @@ def _find_matching_detection(row: CSVRow) -> tuple[dict, str]:
             )
             if closest_reviewed_delta_seconds is None or delta_seconds < closest_reviewed_delta_seconds:
                 closest_reviewed_delta_seconds = delta_seconds
-                closest_orcasite_timestamp_pst = _format_timestamp_pst(orcasite_timestamp)
+                closest_orcasite_timestamp_pst = format_timestamp_pacific(orcasite_timestamp)
                 closest_reviewed_comments = comments
 
             if orcasite_timestamp <= row_timestamp <= orcasite_end_timestamp:
@@ -648,7 +615,7 @@ def _find_matching_detection(row: CSVRow) -> tuple[dict, str]:
         last_candidate_count = len(candidates)
         if candidates:
             _, orcasite_timestamp, detection = min(candidates, key=lambda item: item[0])
-            return detection, _format_timestamp_pst(orcasite_timestamp)
+            return detection, format_timestamp_pacific(orcasite_timestamp)
 
     raise ValueError(
         f"Could not find matching OrcaHello false-positive detection for testing row {row!r} "
@@ -672,7 +639,7 @@ def _parse_uri_timestamp_pst(uri: str) -> str:
     except ValueError:
         utc_dt = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%SZ")
     utc_dt = utc_dt.replace(tzinfo=dt_timezone.utc)
-    return _format_timestamp_pst(utc_dt)
+    return format_timestamp_pacific(utc_dt)
 
 
 def validate_aligned_entries(testing_rows: list[CSVRow]) -> None:
@@ -691,7 +658,7 @@ def validate_aligned_entries(testing_rows: list[CSVRow]) -> None:
             continue
 
         _, corrected_timestamp_pst = _find_matching_detection(row)
-        if row.timestamp_pst != corrected_timestamp_pst:
+        if parse_timestamp_pacific(row.timestamp_pst) != parse_timestamp_pacific(corrected_timestamp_pst):
             corrected_row = _build_corrected_testing_row(row, corrected_timestamp_pst)
             mismatches.append(
                 "Unaligned false-positive testing row:\n"
@@ -725,7 +692,7 @@ def validate_uri_timestamps(rows: list[CSVRow]) -> None:
             )
             continue
 
-        if uri_timestamp_pst != row.timestamp_pst:
+        if parse_timestamp_pacific(uri_timestamp_pst) != parse_timestamp_pacific(row.timestamp_pst):
             mismatches.append(
                 "Timestamp mismatch between CSV and URI:\n"
                 f"  csv: {row.node_name} {row.timestamp_pst}\n"
@@ -822,7 +789,7 @@ def download_audio_segment(
     """
     label_dir = output_root / category
     label_dir.mkdir(parents=True, exist_ok=True)
-    timestamp_pst = parse_timestamp_pst(timestamp_str)
+    timestamp_pst = parse_timestamp_pacific(timestamp_str)
 
     # Check if the file already exists.
     wav_filename = _get_wav_filename(node_name, timestamp_str)
@@ -1031,7 +998,7 @@ def download_testing_file(expected_path: Path, output_root: Path, cache_root: Pa
 
     node_name, timestamp_pst = parse_node_and_timestamp_from_filename(expected_path)
 
-    start_time_utc = parse_timestamp_pst(timestamp_pst).astimezone(dt_timezone.utc)
+    start_time_utc = parse_timestamp_pacific(timestamp_pst).astimezone(dt_timezone.utc)
     print(f"  Downloading {TESTING_WINDOW_SECONDS}-second audio from {timestamp_pst}...")
 
     with TemporaryDirectory() as tmp_dir:

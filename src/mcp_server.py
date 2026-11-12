@@ -80,7 +80,6 @@ def _read_csv(path: Path) -> List[Dict[str, str]]:
     if not path.exists():
         raise FileNotFoundError(
             f"Expected CSV not found: {path}. "
-            "Run the pipeline scripts (make_csv → extract_training_samples → merge_training_samples) first."
         )
     with open(path, newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))

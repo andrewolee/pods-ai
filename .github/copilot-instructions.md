@@ -108,8 +108,8 @@ Classification kinds: `tp_human_only`, `tp_machine_only`, `fp_machine_only`, `tp
 - **LiveInferenceSystem.yaml** – Runs on every PR touching `LiveInferenceSystem/**` or the orchestrator source files; builds the Docker image from the repo root and runs a LiveHLS smoke test.
 - **LiveInferenceSystem-deploy.yaml** – Triggered by a `LiveInferenceSystem.v#.#.#` tag push; builds and pushes the container image to `orcaconservancycr.azurecr.io/pods-ai-live-inference-system`.
 - **LiveInferenceSystem-deploy-configmaps.yaml** – Triggered when `LiveInferenceSystem/deploy/*-configmap.yaml` files change on `main`; applies updated configmaps and restarts the affected deployments via `kubectl`.
-- **generate_model_comparison.yml** – Runs model comparison and regenerates `README.md` from `README.md.template` and `model-comparison.txt`.
-- **validate-readme.yml** – Runs on PRs changing `README.md.template` or `model-comparison.txt` and verifies that `README.md` matches `python src/build-readme.py`.
+- **generate_model_comparison.yml** – Runs model comparisons in parallel for `orcahello`, `oldpodsai`, and `podsai`, then aggregates their artifacts and regenerates `README.md` from `README.md.template` and `model-comparison-*.txt`.
+- **validate-readme.yml** – Runs on PRs changing `README.md.template` or `model-comparison-*.txt` and verifies that `README.md` matches `python src/build-readme.py`.
 - **validate-yaml.yml** – Runs `yamllint` against all YAML files using the rules in `.yamllint.yml` (line-length disabled, truthy check-keys disabled).
 - **dependabot.yml** – Weekly updates for GitHub Actions dependencies.
 - **renovate.json** – Tracks additional dependency updates, including the pinned PODS-AI test model revision.

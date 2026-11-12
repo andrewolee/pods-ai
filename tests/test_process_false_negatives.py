@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from add_samples import add_training_3s_samples
-from make_csv import OrcaHelloDetection
+from audio_utils import OrcaHelloDetection
 from orcasite_feeds import OrcasiteFeed
 import process_false_negatives as false_negatives_module
 from process_false_negatives import (

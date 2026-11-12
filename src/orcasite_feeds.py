@@ -5,8 +5,7 @@ Lightweight helpers for fetching Orcasite feed metadata.
 
 This module is intentionally kept free of azure-cosmos and other heavy
 dependencies so that any script needing only the feeds API (e.g.
-add_samples.py) can import it without pulling in the full make_csv
-dependency tree.
+add_samples.py) can import it.
 """
 
 from dataclasses import dataclass

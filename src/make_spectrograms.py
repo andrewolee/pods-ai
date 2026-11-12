@@ -10,11 +10,10 @@ finds all .wav files saved by download_wavs.py, and creates a spectrogram
 Usage:
     python src/make_spectrograms.py
 """
+import argparse
 import sys
 from pathlib import Path
 from typing import List
-
-import spectrogram_visualizer
 
 
 def find_wav_files(root_dir: Path) -> List[Path]:
@@ -46,6 +45,8 @@ def process_wav_files(wav_root: Path, png_root: Path, skip_existing: bool = True
         png_root: Root directory where .png spectrograms will be saved.
         skip_existing: If True, skip .wav files that already have a .png spectrogram.
     """
+    import spectrogram_visualizer
+
     wav_files = find_wav_files(wav_root)
     
     if not wav_files:
@@ -83,13 +84,46 @@ def process_wav_files(wav_root: Path, png_root: Path, skip_existing: bool = True
     print(f"Errors: {error_count}")
 
 
-if __name__ == "__main__":
+def main() -> int:
+    """Generate spectrograms for one WAV file or the default directory."""
+    parser = argparse.ArgumentParser(
+        description="Generate spectrograms for a WAV file or files in output/wav."
+    )
+    parser.add_argument(
+        "wav_file",
+        nargs="?",
+        type=Path,
+        help="Generate a spectrogram for this WAV file only.",
+    )
+    args = parser.parse_args()
+
+    if args.wav_file is not None:
+        if not args.wav_file.is_file():
+            print(f"Error: WAV file not found: {args.wav_file}")
+            return 1
+
+        import spectrogram_visualizer
+
+        try:
+            print(f"Processing: {args.wav_file}")
+            spec_path = spectrogram_visualizer.write_spectrogram(args.wav_file)
+            print(f"  -> Created spectrogram: {spec_path}")
+        except Exception as e:
+            print(f"  -> ERROR processing {args.wav_file}: {type(e).__name__}: {str(e)}")
+            return 1
+        return 0
+
     wav_root = Path("output/wav")
     png_root = Path("output/png")
-    
+
     if not wav_root.exists():
         print(f"Error: Directory not found: {wav_root}")
         print("Please ensure the output/wav directory exists.")
-        sys.exit(1)
-    
+        return 1
+
     process_wav_files(wav_root, png_root)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

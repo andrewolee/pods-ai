@@ -1,0 +1,33 @@
+# Copyright (c) PODS-AI contributors
+# SPDX-License-Identifier: MIT
+---
+name: Build DatasetManager
+
+on:
+  pull_request:
+    paths:
+      - DatasetManager/**
+      - external/orcahello
+      - .github/workflows/build-datasetmanager.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-datasetmanager:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73  # v6.1.0
+        with:
+          dotnet-version: 11.0.x
+
+      - name: Build DatasetManager
+        run: dotnet build DatasetManager/DatasetManager.csproj --configuration Release --verbosity minimal

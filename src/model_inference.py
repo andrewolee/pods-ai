@@ -165,9 +165,7 @@ class ModelInference:
     - FastAIModel: 1-second hop, produces per-second confidences
     - PodsAIInference: Configurable hop (default 2 seconds)
 
-    The timestamp correction logic in extract_training_samples.py automatically infers
-    the hop duration from the output length, so implementations are free to choose
-    their own hop size.
+    Implementations are free to choose their own hop size.
 
     Supports both binary classification (whale vs other) and multi-class classification
     (species identification).
