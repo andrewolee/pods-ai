@@ -22,6 +22,61 @@ that whale category.  Thus, if 2 out of 20 non-whale samples were mis-predicted 
 the F1 for the individual 3-second periods may be 90% but the 60-second sample would still
 result in a false positive.
 
+### Experimental hum-category comparison
+
+An unpublished nine-class candidate was evaluated on November 12-13, 2026.
+These are investigation results, not a replacement for the released model.
+The published comparison above is from an earlier 830-clip run; the results
+below use a freshly evaluated baseline on the same 834 clips as the candidate.
+
+The baseline is `davethaler/whale-call-detector` at revision
+`d66c75205e3d229aa5fe875cb27bc90304654fcd`. The candidate was fine-tuned from
+`MIT/ast-finetuned-audioset-10-10-0.4593`, using Python source commit
+`dbf2a85534edcb94c1cb1a72012ffb8596ff315b`, nine classes, five epochs, and batch
+size eight. Training used 514 manifest rows plus two retained humpback signal
+windows, for 516 three-second clips. The reviewed CSV changes leave 12 hum
+training rows and two hum testing rows.
+
+Both models used the same inference defaults and all 147 main testing clips
+plus 687 DCLDE clips, with no skipped samples.
+
+| Metric | Released eight-class model | Local nine-class hum candidate |
+|---|---:|---:|
+| Evaluated 60-second clips | 834 | 834 |
+| Category accuracy | 91.0% | 91.8% |
+| Whale macro F1 | 0.749 | 0.747 |
+| Resident F1 | 0.819 | 0.824 |
+| Transient F1 | 0.737 | 0.648 |
+| Humpback F1 | 0.692 | 0.769 |
+| Resident false alerts | 32 | 28 |
+| Missed resident clips | 52 | 53 |
+| Transient false alerts | 7 | 19 |
+
+Whale F1 and alert counts use the full prediction-label sets, with hum treated
+as background. Category accuracy is not fully comparable on hum samples,
+because the released model cannot emit that label.
+
+On the two held-out hum clips, both from Sunset Bay, the baseline emitted only
+`vessel`. The candidate emitted `resident, vessel, hum` for the August 20 clip
+and `jingle, vessel, hum` for the August 21 clip. It therefore recognized hum
+in both clips but also introduced one false resident alert.
+
+The candidate did not improve overall whale F1, so it does not meet the
+README's F1-improvement criterion for proceeding with a new model. The hum
+testing population is too small for a firm conclusion, and this is a comparison
+of whole models rather than a controlled hum-only ablation. The released model
+revision remains unchanged.
+
+Commands used, with WAVs prepared and the local model path omitted:
+
+```powershell
+python src\train_podsai_model.py --num_classes 9 --epochs 5 --batch_size 8 `
+  --preprocessing_workers 2 --output_dir "<local-model-directory>"
+python src\compare_models.py --models podsai,custom `
+  --podsai-model-revision d66c75205e3d229aa5fe875cb27bc90304654fcd `
+  --custom-model-path "<local-model-directory>"
+```
+
 ## Getting Started
 
 1. Install Python 3.12
@@ -173,7 +228,7 @@ The active scripts in `src` include:
   to Azure Blob Storage and Cosmos DB.
 - [**compare_models.py**](docs/compare-models.md): Evaluates and compares fastai, orcahello, podsai (latest), and oldpodsai (deployed) models
   on the test set loaded from `output/csv/testing_60s_samples.csv` and downloaded by `download_wavs.py`.
-  Abiotic samples accept water, vessel, and jingle predictions as correct.
+  Abiotic samples accept water, vessel, jingle, and hum predictions as correct.
   Reports correct identifications, false positives, false negatives, and average prediction time for each model.
 
 ## Data Flow Architecture
