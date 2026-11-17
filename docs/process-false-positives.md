@@ -7,10 +7,10 @@ appending candidate rows to the selected manual-samples CSV (training defaults t
 `output/csv/new_manual_testing_samples.csv`).
 
 Moderation tags take precedence over comments. Tag aliases are normalized before
-class priority is applied: `ship` becomes `vessel`, and `60Hz`, `60 Hz`, or `60-Hz`
-becomes `hum`. Whale tags take precedence over sporadic-event tags (`jingle`,
-`bird`), which take precedence over background tags. Within the same priority
-tier, the first matching tag wins.
+class priority is applied: `ship`, `boat`, and `train` become `vessel`, and
+`60Hz`, `60 Hz`, or `60-Hz` becomes `hum`. Whale tags take precedence over
+sporadic-event tags (`jingle`, `bird`), which take precedence over background
+tags. Within the same priority tier, the first matching tag wins.
 
 Without moderation tags, the corrected class is inferred from the human-authored
 portion of the moderation comments (auto-generated "AI: …" lines are ignored).

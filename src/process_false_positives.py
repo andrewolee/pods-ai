@@ -67,7 +67,6 @@ NO_HUM_PATTERN = re.compile(
 WHALE_CLASSES = {"resident", "transient", "humpback"}
 NEGATIVE_CLASSES = {"jingle", "bird"}
 BACKGROUND_CLASSES = {"vessel", "human", "water", "other", "hum"}
-TAG_ALIASES = {"60hz": "hum", "60 hz": "hum", "60-hz": "hum", "ship": "vessel"}
 # Phrases that negate "humpback" or "vessel" labels (e.g. human-written "No humpback nor vessel").
 NO_HUMPBACK_TERMS = ("no humpback", "not humpback")
 NO_VESSEL_TERMS = ("no vessel", "nor vessel", "no boat", "nor boat", "no ship", "nor ship", "no train", "nor train")
@@ -89,7 +88,10 @@ def get_corrected_class(comments: str, tags: Optional[str]) -> Optional[str]:
     if tags:
         normalized_tags = [tag.strip().lower() for tag in tags.split(";")]
         normalized_tags = [
-            TAG_ALIASES.get(tag, tag) for tag in normalized_tags
+            "vessel" if tag in VESSEL_TERMS
+            else "hum" if tag in HUM_TERMS
+            else tag
+            for tag in normalized_tags
         ]
 
         # Priority order regardless of tag position: see constants above.

@@ -85,6 +85,8 @@ class TestGetCorrectedClass:
         """Tags are split on ';', stripped, and matched case-insensitively; first matching tag returned."""
         assert get_corrected_class("", "  Humpback  ; other") == "humpback"
         assert get_corrected_class("", "  ShIp  ; other") == "vessel"
+        assert get_corrected_class("", "  BoAt  ; other") == "vessel"
+        assert get_corrected_class("", "  TrAiN  ; other") == "vessel"
 
     def test_tags_unknown_returns_water(self):
         """If tags contain no known classes, return 'water'."""
@@ -95,6 +97,8 @@ class TestGetCorrectedClass:
         assert get_corrected_class("", "vessel;water") == "vessel"
         assert get_corrected_class("", "ship;60Hz;hum") == "vessel"
         assert get_corrected_class("", "hum;ship") == "hum"
+        assert get_corrected_class("", "boat;hum") == "vessel"
+        assert get_corrected_class("", "hum;train") == "hum"
 
     def test_tags_negative_tier_takes_priority_over_background_tier(self):
         """A sporadic-event tag (jingle, bird) wins over a constant background tag (vessel, etc.),
